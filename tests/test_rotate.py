@@ -4,6 +4,8 @@ import contextlib
 import io
 import json
 import random
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -154,6 +156,50 @@ class CommandLineTests(unittest.TestCase):
     def test_default_filename(self):
         self.assertEqual(rotate.default_out("Rotation 2026").name, "rotation-2026.json")
         self.assertEqual(rotate.default_out("Night Ops").name, "rotation-night-ops.json")
+
+
+@unittest.skipUnless(shutil.which("node"), "Node.js not installed; web logic not tested")
+class WebParityTests(unittest.TestCase):
+    """Runs the website's generator (web/rotation.js) and checks it against the same rules."""
+
+    def generate(self, **opts):
+        out = subprocess.run(["node", str(ROOT / "tests" / "web_generate.mjs"), json.dumps(opts)],
+                             capture_output=True, text=True, encoding="utf-8", check=True).stdout
+        return json.loads(out)
+
+    def test_web_output_is_valid_and_follows_rules(self):
+        catalog = rotate.load_catalog()
+        internal = {m["map"]: d for d, m in catalog["maps"].items()}
+        legacy = {mode["experience"] for m in catalog["maps"].values()
+                  for mode in m["modes"].values() if mode.get("legacy")}
+        cases = [dict(count=30, seed=1),
+                 dict(count=12, seed=2, modifiers=["InfantryOnly"]),
+                 dict(count=12, seed=3, modifiers=["Hardcore", "InfantryOnly"], maps=["Ozeti", "Bakurani"]),
+                 dict(count=40, seed=4, includeLegacy=True)]
+        for opts in cases:
+            with self.subTest(opts=opts):
+                rot = self.generate(**opts)
+                self.assertEqual(rotate.validate_rotation(rot, catalog), [])
+                entries = rot["entries"]
+                self.assertEqual(len(entries), opts["count"])
+                maps = [internal[e["map"]] for e in entries]
+                self.assertTrue(all(a != b for a, b in zip(maps, maps[1:])))
+                self.assertEqual(len({rotate.entry_key(e) for e in entries}), len(entries))
+                self.assertEqual(len({tuple(e["modifiers"]) for e in entries}), 1)
+                if opts.get("maps"):
+                    self.assertTrue(set(maps) <= set(opts["maps"]))
+                used_legacy = {e["experience"] for e in entries} & legacy
+                self.assertEqual(bool(used_legacy), bool(opts.get("includeLegacy")))
+
+    def test_web_writes_same_layout_as_python(self):
+        rot = self.generate(count=3, seed=5)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "r.json"
+            rotate.write_rotation(rot, out)
+            text = subprocess.run(["node", str(ROOT / "tests" / "web_generate.mjs"),
+                                   json.dumps(dict(count=3, seed=5))],
+                                  capture_output=True, text=True, encoding="utf-8", check=True).stdout
+            self.assertEqual(out.read_text(encoding="utf-8"), text)
 
 
 if __name__ == "__main__":

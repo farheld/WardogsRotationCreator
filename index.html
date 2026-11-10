@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wardogs Rotation Creator</title>
+  <meta name="description" content="Build a random WARDOGS map rotation and download it as a file for the WarDogs Server Commands dashboard.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231d2b23'/%3E%3Cpath d='M9 22 16 9l7 13' fill='none' stroke='%23e2a21b' stroke-width='3.2' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="web/style.css">
+  <script type="module" src="web/app.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <h1>Wardogs Rotation Creator</h1>
+    <p class="lede">
+      Pick your maps and conditions, get a random rotation, and import the file on the
+      <a href="https://wardogsbot.com/">WarDogs Server Commands</a> dashboard under Rotation.
+    </p>
+  </header>
+
+  <main class="layout">
+    <form id="settings" class="settings" autocomplete="off">
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">Rotation name</span>
+          <input id="name" type="text" maxlength="120">
+        </label>
+        <label class="field field-count">
+          <span class="field-label">Maps in rotation</span>
+          <input id="count" type="number" min="1" max="100" value="10" inputmode="numeric">
+        </label>
+      </div>
+
+      <fieldset class="group" data-group="maps">
+        <legend>Maps</legend>
+        <div class="chips" id="maps"></div>
+      </fieldset>
+
+      <fieldset class="group" data-group="modifiers">
+        <legend>Game mode</legend>
+        <p class="hint">Standard unless you add a modifier. Your choice applies to every map.</p>
+        <div class="chips" id="modifiers"></div>
+        <label class="check" id="legacy-wrap" hidden>
+          <input type="checkbox" id="legacy">
+          <span id="legacy-label">Include legacy modes</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="group" data-group="lighting">
+        <legend>Lighting</legend>
+        <div class="chips chips-lighting" id="lighting"></div>
+      </fieldset>
+
+      <fieldset class="group" data-group="zones">
+        <legend>Zones</legend>
+        <div id="zones"></div>
+      </fieldset>
+    </form>
+
+    <section class="output" aria-labelledby="output-title">
+      <div class="output-head">
+        <h2 id="output-title">Running order</h2>
+        <button type="button" class="btn btn-quiet" id="shuffle">Shuffle</button>
+      </div>
+      <p class="summary" id="summary"></p>
+      <div id="notes" class="notes" role="status" aria-live="polite"></div>
+      <ol class="order" id="order"></ol>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="download">Download rotation</button>
+        <button type="button" class="btn" id="copy-json">Copy JSON</button>
+        <button type="button" class="btn" id="copy-link">Copy share link</button>
+        <span class="toast" id="toast" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>
+      A community tool, not affiliated with the WARDOGS developers or wardogsbot.com.
+      Source and a command-line version are on
+      <a href="https://github.com/farheld/WardogsRotationCreator">GitHub</a>.
+    </p>
+  </footer>
+
+  <noscript><p class="noscript">This page needs JavaScript to build rotations.</p></noscript>
+</body>
+</html>

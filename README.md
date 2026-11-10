@@ -11,13 +11,28 @@ it as-is.
 > This is a community tool. It isn't affiliated with the WARDOGS developers or with
 > wardogsbot.com. The file format follows rotations exported from the wardogsbot.com dashboard.
 
-## Requirements
+## Use it online
+
+**[farheld.github.io/WardogsRotationCreator](https://farheld.github.io/WardogsRotationCreator/)**
+is free, needs no install, and runs entirely in your browser.
+
+1. Pick your maps, game mode, lighting and zones. Everything is selected by default except the
+   modifiers, which default to the standard game mode.
+2. Use **Shuffle** until you like the running order.
+3. Select **Download rotation**, then import the file in the dashboard under **Rotation**.
+
+**Copy share link** gives a link that opens the exact same rotation and settings, which is
+handy for sharing in Discord.
+
+## Use it on your computer
+
+### Requirements
 
 - Python 3.9 or newer ([python.org](https://www.python.org/downloads/)). On Windows, tick
   **"Add python.exe to PATH"** during setup.
 - Nothing else. The tool only uses Python's standard library.
 
-## Quick start
+### Quick start
 
 1. Download this repository (**Code → Download ZIP**) and unzip it, or `git clone` it.
 2. Start the tool:
@@ -104,7 +119,8 @@ Map names can be display names or internal names, and filters ignore case. Run
 
 | Path | Purpose |
 |---|---|
-| `rotate.py` | The generator: interactive prompts and command line |
+| `index.html`, `web/` | The website (GitHub Pages). `web/rotation.js` holds the generation logic |
+| `rotate.py` | The command-line generator: interactive prompts and options |
 | `data/catalog.json` | Every valid map / mode / modifier / lighting / zone option |
 | `Rotation Creator.bat` | Windows double-click launcher |
 | `rotations/` | Your generated rotations (git-ignored) |
@@ -113,7 +129,9 @@ Map names can be display names or internal names, and filters ignore case. Run
 | `examples/` | Dashboard exports, used as reference and test fixtures |
 | `tests/` | Unit tests |
 
-To run it, you only need `rotate.py` and `data/catalog.json`, kept in the same folder layout.
+To run the command-line version, you only need `rotate.py` and `data/catalog.json`, kept in the
+same folder layout. Both the website and `rotate.py` read the same `data/catalog.json`, and they
+follow the same rules.
 
 ## Rotation file format
 
@@ -157,8 +175,13 @@ the dashboard, export it, and copy the values from the export.
 ## Development
 
 ```bash
-python -m unittest
+python -m unittest           # Python tests, plus website logic tests if Node.js is installed
+python -m http.server 8000   # preview the website at http://localhost:8000
 ```
+
+The website is a static page served by GitHub Pages from the root of `main`. There is no build
+step and no server. If you open `index.html` straight from disk, the browser blocks it from
+loading the catalog, so use a local server as shown above.
 
 The tests check that the example exports validate, that generated rotations follow the format
 and the rules (no back-to-back maps, no duplicates, balanced maps, legacy modes opt-in, the same
