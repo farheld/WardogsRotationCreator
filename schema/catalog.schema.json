@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wardogs-catalog.schema.json",
+  "title": "Wardogs rotation catalog",
+  "description": "Every valid map / mode / modifier / lighting / zone option that rotate.py may pick from. Keys under 'maps' are display names (Zestafona, Ozeti, Bakurani).",
+  "type": "object",
+  "required": ["maps", "lightingTags"],
+  "additionalProperties": false,
+  "properties": {
+    "notes": { "type": "string" },
+    "maps": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/map" }
+    },
+    "lightingTags": {
+      "type": "object",
+      "description": "Lighting preset -> tags (time of day, weather) used by --weather / --exclude-weather.",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    }
+  },
+  "$defs": {
+    "map": {
+      "type": "object",
+      "required": ["map", "modes", "lighting", "zones"],
+      "additionalProperties": false,
+      "properties": {
+        "map": { "type": "string", "description": "Internal map name written to the rotation file." },
+        "modes": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/mode" }
+        },
+        "lighting": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "zones": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Zone alternator ids. Include \"\" if the default zone is allowed."
+        }
+      }
+    },
+    "mode": {
+      "type": "object",
+      "required": ["experience", "modifiers"],
+      "additionalProperties": false,
+      "properties": {
+        "experience": { "type": "string" },
+        "legacy": {
+          "type": "boolean",
+          "description": "Excluded from rotations unless asked for by name (--modes) or with --include-legacy."
+        },
+        "modifiers": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Allowed modifier sets; each item is one complete 'modifiers' array. Use [] for no modifiers.",
+          "items": { "type": "array", "items": { "type": "string" } }
+        },
+        "lighting": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional override: lighting allowed for this mode only."
+        },
+        "zones": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional override: zones allowed for this mode only."
+        }
+      }
+    }
+  }
+}

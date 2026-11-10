@@ -1,0 +1,97 @@
+{
+  "kind": "wardogs-rotation",
+  "name": "Example export - blank zones",
+  "mode": "Ordered",
+  "entries": [
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayClear",
+      "zoneAlternator": ""
+    },
+    {
+      "map": "Europe",
+      "experience": "Madrid_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateGrayFog",
+      "zoneAlternator": ""
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_02",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Farmland.Circle"
+    },
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateClear",
+      "zoneAlternator": "ZoneAlternator.Zestafona.Default.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_02",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayEndClear",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Lumberyard.Circle"
+    },
+    {
+      "map": "Europe",
+      "experience": "Madrid_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayStartClear",
+      "zoneAlternator": "ZoneAlternator.Ozeti.Church.Circle"
+    },
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Zestafona.WaterTreatment.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_02",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayClear",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Lumberyard.Circle"
+    },
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayClear",
+      "zoneAlternator": "ZoneAlternator.Zestafona.Houses.Circle"
+    },
+    {
+      "map": "Europe",
+      "experience": "Madrid_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Ozeti.River.Circle"
+    }
+  ]
+}

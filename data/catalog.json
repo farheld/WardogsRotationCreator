@@ -1,0 +1,68 @@
+{
+  "notes": "Built from examples/export-all-options.json (a dashboard export containing every option). All lighting presets are available on every map. A blank zone (\"\") in bot exports means Default, so only the explicit Default.Circle zone is listed.",
+  "maps": {
+    "Zestafona": {
+      "map": "NorthAmerica",
+      "modes": {
+        "KOTH": {
+          "experience": "Detroit_KOTH_01",
+          "modifiers": [["KOTH_InfantryOnly"]]
+        }
+      },
+      "lighting": ["DayStartClear", "DayEarlyClear", "DayEarlyFog", "DayClear", "DayLateClear", "DayLateGray", "DayLateGrayFog", "DayLateRain", "DayEndClear"],
+      "zones": [
+        "ZoneAlternator.Zestafona.Default.Circle",
+        "ZoneAlternator.Zestafona.Houses.Circle",
+        "ZoneAlternator.Zestafona.SmallFactory.Circle",
+        "ZoneAlternator.Zestafona.WaterTreatment.Circle"
+      ]
+    },
+    "Ozeti": {
+      "map": "Europe",
+      "modes": {
+        "KOTH": {
+          "experience": "Madrid_KOTH_01",
+          "modifiers": [["KOTH_InfantryOnly"]]
+        }
+      },
+      "lighting": ["DayStartClear", "DayEarlyClear", "DayEarlyFog", "DayClear", "DayLateClear", "DayLateGray", "DayLateGrayFog", "DayLateRain", "DayEndClear"],
+      "zones": [
+        "ZoneAlternator.Ozeti.Default.Circle",
+        "ZoneAlternator.Ozeti.Church.Circle",
+        "ZoneAlternator.Ozeti.Farmland.Circle",
+        "ZoneAlternator.Ozeti.River.Circle"
+      ]
+    },
+    "Bakurani": {
+      "map": "Kavkazi",
+      "modes": {
+        "KOTH": {
+          "experience": "Bakurani_KOTH_02",
+          "modifiers": [["KOTH_InfantryOnly"]]
+        },
+        "KOTH_Legacy": {
+          "experience": "Bakurani_KOTH_01",
+          "modifiers": [["KOTH_InfantryOnly"]],
+          "legacy": true
+        }
+      },
+      "lighting": ["DayStartClear", "DayEarlyClear", "DayEarlyFog", "DayClear", "DayLateClear", "DayLateGray", "DayLateGrayFog", "DayLateRain", "DayEndClear"],
+      "zones": [
+        "ZoneAlternator.Bakurani.Default.Circle",
+        "ZoneAlternator.Bakurani.Farmland.Circle",
+        "ZoneAlternator.Bakurani.Lumberyard.Circle"
+      ]
+    }
+  },
+  "lightingTags": {
+    "DayStartClear": ["dawn", "clear"],
+    "DayEarlyClear": ["morning", "clear"],
+    "DayEarlyFog": ["morning", "fog"],
+    "DayClear": ["midday", "clear"],
+    "DayLateClear": ["afternoon", "clear"],
+    "DayLateGray": ["afternoon", "overcast"],
+    "DayLateGrayFog": ["afternoon", "overcast", "fog"],
+    "DayLateRain": ["afternoon", "rain"],
+    "DayEndClear": ["dusk", "clear"]
+  }
+}

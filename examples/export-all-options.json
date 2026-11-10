@@ -1,0 +1,160 @@
+{
+  "kind": "wardogs-rotation",
+  "name": "Example export - all options",
+  "mode": "Ordered",
+  "entries": [
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayStartClear",
+      "zoneAlternator": ""
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayEarlyClear",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Default.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayEarlyFog",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Farmland.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayClear",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Lumberyard.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateClear",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Default.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateGray",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Default.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateGrayFog",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Default.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayEndClear",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Default.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_02",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Default.Circle"
+    },
+    {
+      "map": "Europe",
+      "experience": "Madrid_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Ozeti.Default.Circle"
+    },
+    {
+      "map": "Europe",
+      "experience": "Madrid_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Ozeti.Farmland.Circle"
+    },
+    {
+      "map": "Europe",
+      "experience": "Madrid_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Ozeti.Church.Circle"
+    },
+    {
+      "map": "Europe",
+      "experience": "Madrid_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Ozeti.River.Circle"
+    },
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Zestafona.Default.Circle"
+    },
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Zestafona.SmallFactory.Circle"
+    },
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Zestafona.WaterTreatment.Circle"
+    },
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly"
+      ],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Zestafona.Houses.Circle"
+    }
+  ]
+}
