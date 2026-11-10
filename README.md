@@ -149,3 +149,7 @@ python -m unittest
 The tests check that the example exports validate, that generated rotations follow the format
 and the rules (no back-to-back maps, no duplicates, balanced maps, legacy modes opt-in), and that
 the filters work.
+
+## License
+
+[MIT](LICENSE)
