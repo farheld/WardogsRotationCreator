@@ -36,13 +36,13 @@
           "type": "array",
           "minItems": 1,
           "items": { "type": "string" },
-          "description": "Zone alternator ids. Include \"\" if the default zone is allowed."
+          "description": "Zone alternator ids, including the explicit ZoneAlternator.<Map>.Default.Circle. Don't use \"\" (blank means Default)."
         }
       }
     },
     "mode": {
       "type": "object",
-      "required": ["experience", "modifiers"],
+      "required": ["experience"],
       "additionalProperties": false,
       "properties": {
         "experience": { "type": "string" },
@@ -51,10 +51,9 @@
           "description": "Excluded from rotations unless asked for by name (--modes) or with --include-legacy."
         },
         "modifiers": {
-          "type": "array",
-          "minItems": 1,
-          "description": "Allowed modifier sets; each item is one complete 'modifiers' array. Use [] for no modifiers.",
-          "items": { "type": "array", "items": { "type": "string" } }
+          "type": "object",
+          "description": "Optional modifiers this mode supports: friendly name -> modifier id (e.g. \"Hardcore\": \"KOTH_Hardcore\"). Any combination may be used; none = standard game mode. Order here is the order written to rotation files.",
+          "additionalProperties": { "type": "string" }
         },
         "lighting": {
           "type": "array",

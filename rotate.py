@@ -58,29 +58,68 @@ def normalize_zone(entry: dict, catalog: dict) -> str:
     return ""
 
 
-def build_pool(catalog: dict) -> list[dict]:
-    """Expand the catalog into every valid combination."""
+def build_pool(catalog: dict, modifiers=()) -> list[dict]:
+    """Expand the catalog into every valid combination for one modifier choice.
+
+    `modifiers` are modifier names (e.g. "InfantryOnly") applied to EVERY entry, so the
+    game mode never changes between maps. Empty = standard game mode. Modes that don't
+    support all the chosen modifiers are left out.
+    """
+    chosen = set(modifiers)
     pool = []
     for display, m in catalog["maps"].items():
         for mode_name, mode in m["modes"].items():
-            lighting = mode.get("lighting", m["lighting"])
-            zones = mode.get("zones", m["zones"])
-            for mods in mode["modifiers"]:
-                for light in lighting:
-                    for zone in zones:
-                        pool.append({
-                            "display": display,
-                            "modeName": mode_name,
-                            "legacy": bool(mode.get("legacy")),
-                            "entry": {
-                                "map": m["map"],
-                                "experience": mode["experience"],
-                                "modifiers": list(mods),
-                                "lighting": light,
-                                "zoneAlternator": zone,
-                            },
-                        })
+            available = mode.get("modifiers", {})
+            if not chosen <= set(available):
+                continue
+            mod_ids = [mod_id for name, mod_id in available.items() if name in chosen]
+            for light in mode.get("lighting", m["lighting"]):
+                for zone in mode.get("zones", m["zones"]):
+                    pool.append({
+                        "display": display,
+                        "modeName": mode_name,
+                        "legacy": bool(mode.get("legacy")),
+                        "entry": {
+                            "map": m["map"],
+                            "experience": mode["experience"],
+                            "modifiers": list(mod_ids),
+                            "lighting": light,
+                            "zoneAlternator": zone,
+                        },
+                    })
     return pool
+
+
+def modifier_names(catalog: dict, maps=None) -> list[str]:
+    """All modifier names offered by the given maps (display names), in catalog order."""
+    names = []
+    for display, m in catalog["maps"].items():
+        if maps and display not in maps:
+            continue
+        for mode in m["modes"].values():
+            names.extend(n for n in mode.get("modifiers", {}) if n not in names)
+    return names
+
+
+def resolve_modifiers(catalog: dict, specs) -> list[str]:
+    """Turn user input ('infantry', 'KOTH_Hardcore', 'none', ...) into modifier names."""
+    known = {}
+    for m in catalog["maps"].values():
+        for mode in m["modes"].values():
+            for name, mod_id in mode.get("modifiers", {}).items():
+                known.setdefault(name, set()).add(mod_id.lower())
+    out = []
+    for spec in specs or []:
+        s = spec.strip().lower()
+        if s in ("none", "standard", "default"):
+            continue
+        matches = [n for n, ids in known.items() if s == n.lower() or s in ids] or \
+                  [n for n in known if n.lower().startswith(s)]
+        if len(matches) != 1:
+            raise RotationError(f"Unknown modifier '{spec}'. Available: {', '.join(known)} (or 'none').")
+        if matches[0] not in out:
+            out.append(matches[0])
+    return out
 
 
 def entry_key(entry: dict) -> tuple:
@@ -105,14 +144,6 @@ def filter_pool(pool: list[dict], catalog: dict, args) -> list[dict]:
     zones = _norm(args.zones)
     ex_zones = _norm(args.exclude_zones)
 
-    if args.modifiers is None:
-        modifier_sets = None
-    else:
-        modifier_sets = set()
-        for spec in args.modifiers:
-            parts = [] if spec.lower() == "none" else [p for p in spec.split("+") if p]
-            modifier_sets.add(tuple(sorted(p.lower() for p in parts)))
-
     def zone_match(zone: str, wanted: set) -> bool:
         if is_default_zone(zone) and ("default" in wanted or "none" in wanted):
             return True
@@ -131,8 +162,6 @@ def filter_pool(pool: list[dict], catalog: dict, args) -> list[dict]:
         if modes and not mode_named:
             continue
         if c["legacy"] and not (args.include_legacy or mode_named):
-            continue
-        if modifier_sets is not None and tuple(sorted(m.lower() for m in e["modifiers"])) not in modifier_sets:
             continue
         if lighting and e["lighting"].lower() not in lighting:
             continue
@@ -216,7 +245,11 @@ def validate_rotation(obj, catalog: dict | None = None) -> list[str]:
         errs.append("entries must be a non-empty array")
         return errs
 
-    valid = {entry_key(c["entry"]) for c in build_pool(catalog)} if catalog else None
+    valid = mode_mods = None
+    if catalog:
+        valid = {entry_key(c["entry"]) for c in build_pool(catalog)}  # without modifiers
+        mode_mods = {(m["map"], mode["experience"]): set(mode.get("modifiers", {}).values())
+                     for m in catalog["maps"].values() for mode in m["modes"].values()}
     for i, e in enumerate(entries):
         where = f"entries[{i}]"
         if not isinstance(e, dict):
@@ -230,8 +263,15 @@ def validate_rotation(obj, catalog: dict | None = None) -> list[str]:
                 errs.append(f"{where}.{k} must be a string")
         if not isinstance(e["modifiers"], list) or not all(isinstance(m, str) for m in e["modifiers"]):
             errs.append(f"{where}.modifiers must be an array of strings")
-        elif valid is not None and entry_key({**e, "zoneAlternator": normalize_zone(e, catalog)}) not in valid:
-            errs.append(f"{where} is not a combination listed in the catalog: {e}")
+        elif valid is not None:
+            base = {**e, "modifiers": [], "zoneAlternator": normalize_zone(e, catalog)}
+            if entry_key(base) not in valid:
+                errs.append(f"{where} is not a combination listed in the catalog: {e}")
+            else:
+                allowed = mode_mods.get((e["map"], e["experience"]), set())
+                bad = [m for m in e["modifiers"] if m not in allowed]
+                if bad or len(set(e["modifiers"])) != len(e["modifiers"]):
+                    errs.append(f"{where} has invalid or duplicate modifiers for {e['experience']}: {e['modifiers']}")
     return errs
 
 
@@ -260,12 +300,17 @@ def write_rotation(rotation: dict, out: Path) -> None:
 
 def summarize(rotation: dict, catalog: dict) -> str:
     internal_to_display = {m["map"]: d for d, m in catalog["maps"].items()}
-    lines = []
+    mod_sets = {tuple(e["modifiers"]) for e in rotation["entries"]}
+    if len(mod_sets) == 1:
+        mods = " + ".join(next(iter(mod_sets))) or "none (standard game mode)"
+        lines = [f"Modifiers on every map: {mods}", ""]
+    else:
+        lines = ["Modifiers: differ between maps", ""]
     for i, e in enumerate(rotation["entries"], 1):
-        mods = "+".join(e["modifiers"]) or "no modifiers"
+        extra = f"  {'+'.join(e['modifiers']) or 'none'}" if len(mod_sets) > 1 else ""
         lines.append(f"{i:>3}. {internal_to_display.get(e['map'], e['map']):<10} "
                      f"{e['experience']:<18} {e['lighting']:<15} "
-                     f"{zone_label(e['zoneAlternator']):<16} {mods}")
+                     f"{zone_label(e['zoneAlternator'])}{extra}")
     return "\n".join(lines)
 
 
@@ -273,7 +318,7 @@ def list_catalog(catalog: dict) -> None:
     for display, m in catalog["maps"].items():
         print(f"{display}  (internal: {m['map']})")
         for mode_name, mode in m["modes"].items():
-            mods = ", ".join("+".join(s) or "none" for s in mode["modifiers"])
+            mods = ", ".join(f"{n} ({i})" for n, i in mode.get("modifiers", {}).items()) or "none"
             legacy = "  [legacy: only if requested]" if mode.get("legacy") else ""
             print(f"  mode {mode_name}: {mode['experience']}  modifiers: {mods}{legacy}")
             if "lighting" in mode:
@@ -284,7 +329,8 @@ def list_catalog(catalog: dict) -> None:
         print(f"  zones:    {', '.join(zone_label(z) for z in m['zones'])}")
     tags = sorted({t for v in catalog.get("lightingTags", {}).values() for t in v})
     print(f"weather/time tags: {', '.join(tags)}")
-    print(f"total combinations: {len(build_pool(catalog))}")
+    print(f"combinations per modifier choice: {len(build_pool(catalog))} "
+          "(modifiers are optional and apply to every map in a rotation)")
 
 
 # --------------------------------------------------------------------------- CLI
@@ -297,7 +343,8 @@ def parse_args(argv=None):
     p.add_argument("--include-legacy", action="store_true",
                    help="Also use legacy modes (e.g. Bakurani_KOTH_01) alongside the current ones")
     p.add_argument("--modifiers", **lst,
-                   help="Allowed modifier sets; join several with '+', use 'none' for no modifiers")
+                   help="Modifiers applied to EVERY map, e.g. InfantryOnly Hardcore. "
+                        "Default: none (standard game mode)")
     p.add_argument("--lighting", **lst, help="Exact lighting presets to allow")
     p.add_argument("--exclude-lighting", **lst, help="Lighting presets to exclude")
     p.add_argument("--weather", **lst, help="Allow lighting with any of these tags, e.g. rain fog")
@@ -341,9 +388,10 @@ def main(argv=None) -> int:
         print("error: --count must be at least 1", file=sys.stderr)
         return 2
 
-    pool = filter_pool(build_pool(catalog), catalog, args)
     rng = random.Random(args.seed)
     try:
+        mods = resolve_modifiers(catalog, args.modifiers)
+        pool = filter_pool(build_pool(catalog, mods), catalog, args)
         picks = pick_entries(pool, args.count, rng, args.allow_repeats)
     except RotationError as e:
         print(f"error: {e} Run with --list to see what's available.", file=sys.stderr)
@@ -421,6 +469,10 @@ def _ask_settings(catalog: dict) -> tuple[str, int, argparse.Namespace]:
     include_legacy = bool(legacy) and _ask_yes(
         f"\nAlso use legacy modes ({', '.join(legacy)})?", False)
 
+    print("\nGame mode modifiers (applied to every map in the rotation):")
+    mods = _ask_pick("Modifiers to use", modifier_names(catalog, chosen_maps),
+                     "none (standard game mode)")
+
     tags = catalog.get("lightingTags", {})
     presets = list(dict.fromkeys(l for d in chosen_maps for l in catalog["maps"][d]["lighting"]))
     light_opts = {f"{p:<15} ({', '.join(tags.get(p, []))})" if tags.get(p) else p: p for p in presets}
@@ -433,7 +485,7 @@ def _ask_settings(catalog: dict) -> tuple[str, int, argparse.Namespace]:
     zones = _ask_pick("Zones to use", list(zone_opts), "all")
 
     args = argparse.Namespace(
-        maps=maps, modes=None, modifiers=None,
+        maps=maps, modes=None, modifiers=mods or [],
         lighting=[light_opts[k] for k in lights] if lights else None, exclude_lighting=None,
         weather=None, exclude_weather=None,
         zones=[zone_opts[k] for k in zones] if zones else None, exclude_zones=None,
@@ -450,15 +502,15 @@ def interactive(catalog: dict) -> int:
     try:
         while True:
             name, count, args = _ask_settings(catalog)
-            pool = filter_pool(build_pool(catalog), catalog, args)
+            pool = filter_pool(build_pool(catalog, args.modifiers), catalog, args)
             if not pool:
                 print("\nNothing matches those choices. Let's try again.")
                 continue
             wanted = args.maps or list(catalog["maps"])
             missing = [m for m in wanted if not any(c["display"] == m for c in pool)]
             if missing:
-                print(f"\nNote: no zones were picked for {', '.join(missing)}, so "
-                      f"{'it' if len(missing) == 1 else 'they'} won't appear in this rotation.")
+                print(f"\nNote: your choices leave nothing for {', '.join(missing)} "
+                      f"(check its zones/modifiers), so it won't appear in this rotation.")
             if count > len(pool):
                 print(f"\nNote: your choices only allow {len(pool)} different combinations, "
                       f"so some of the {count} maps will repeat.")

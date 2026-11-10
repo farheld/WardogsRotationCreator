@@ -63,8 +63,18 @@ All maps support every lighting preset:
 | `DayLateRain` | afternoon, rain |
 | `DayEndClear` | dusk, clear |
 
-All entries use the `KOTH_InfantryOnly` modifier. `Bakurani_KOTH_01` (the old spawns) is never
-picked unless you ask for it.
+`Bakurani_KOTH_01` (the old spawns) is never picked unless you ask for it.
+
+### Modifiers
+
+By default, rotations use the **standard game mode** (no modifiers). You can add either or both
+of these modifiers. Whatever you choose applies to **every map in the rotation**, so the game mode
+never changes between maps.
+
+| Modifier | Id |
+|---|---|
+| InfantryOnly | `KOTH_InfantryOnly` |
+| Hardcore | `KOTH_Hardcore` |
 
 ## Command-line mode
 
@@ -74,6 +84,8 @@ Passing any option skips the prompts, which is handy for scripting:
 python rotate.py --count 10                        # all maps, balanced, no back-to-back repeats
 python rotate.py --name "Night Ops" --count 12
 python rotate.py --maps Bakurani                   # single map
+python rotate.py --modifiers InfantryOnly          # infantry only on every map
+python rotate.py --modifiers InfantryOnly Hardcore # both modifiers on every map
 python rotate.py --weather rain fog                # only lighting tagged rain or fog
 python rotate.py --exclude-weather fog
 python rotate.py --lighting DayClear DayLateRain   # exact lighting presets
@@ -132,8 +144,10 @@ When maps, lighting or zones are added to the game, edit `data/catalog.json`:
 - **Lighting:** add the preset to each map's `lighting` list, and add its tags under
   `lightingTags`.
 - **Zone:** add the full id (e.g. `ZoneAlternator.Ozeti.Market.Circle`) to the map's `zones`.
-- **Mode:** add an entry under the map's `modes` with its `experience` id and allowed `modifiers`
-  sets. Add `"legacy": true` to make it opt-in. A mode can have its own `lighting` / `zones` lists
+- **Modifier:** add `"Name": "ModifierId"` to each mode's `modifiers`. The order there is the
+  order they're written in rotation files.
+- **Mode:** add an entry under the map's `modes` with its `experience` id and supported
+  `modifiers`. Add `"legacy": true` to make it opt-in. A mode can have its own `lighting` / `zones` lists
   if it only supports some of them.
 - **Map:** add a new key under `maps` with its internal `map` name, modes, lighting and zones.
 
@@ -147,8 +161,8 @@ python -m unittest
 ```
 
 The tests check that the example exports validate, that generated rotations follow the format
-and the rules (no back-to-back maps, no duplicates, balanced maps, legacy modes opt-in), and that
-the filters work.
+and the rules (no back-to-back maps, no duplicates, balanced maps, legacy modes opt-in, the same
+modifiers on every map), and that the filters work.
 
 ## License
 

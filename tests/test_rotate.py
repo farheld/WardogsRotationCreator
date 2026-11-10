@@ -58,6 +58,11 @@ class ValidationTests(unittest.TestCase):
                            "lighting": "DayClear", "zoneAlternator": ""}]
         self.assertTrue(rotate.validate_rotation(bad, self.catalog))
 
+    def test_rejects_unknown_modifier(self):
+        obj = json.loads((ROOT / "examples" / "export-modifiers.json").read_text(encoding="utf-8"))
+        obj["entries"][0]["modifiers"] = ["KOTH_NoSnipers"]
+        self.assertTrue(rotate.validate_rotation(obj, self.catalog))
+
     def test_rejects_extra_keys(self):
         obj = json.loads((ROOT / "examples" / "export-all-options.json").read_text(encoding="utf-8"))
         obj["entries"][0]["extra"] = 1
@@ -69,9 +74,30 @@ class GenerationTests(unittest.TestCase):
         self.catalog = rotate.load_catalog()
         self.pool = rotate.build_pool(self.catalog)
 
-    def pick(self, count=20, seed=1, **filters):
-        pool = rotate.filter_pool(self.pool, self.catalog, make_args(**filters))
+    def pick(self, count=20, seed=1, modifiers=(), **filters):
+        pool = rotate.build_pool(self.catalog, modifiers)
+        pool = rotate.filter_pool(pool, self.catalog, make_args(**filters))
         return rotate.pick_entries(pool, count, random.Random(seed), False)
+
+    def test_default_is_standard_game_mode(self):
+        self.assertTrue(all(p["entry"]["modifiers"] == [] for p in self.pick(count=30)))
+
+    def test_modifiers_apply_to_every_map_in_catalog_order(self):
+        for chosen, expected in [(["InfantryOnly"], ["KOTH_InfantryOnly"]),
+                                 (["Hardcore"], ["KOTH_Hardcore"]),
+                                 (["Hardcore", "InfantryOnly"], ["KOTH_InfantryOnly", "KOTH_Hardcore"])]:
+            with self.subTest(chosen=chosen):
+                picks = self.pick(count=30, modifiers=chosen)
+                self.assertEqual({tuple(p["entry"]["modifiers"]) for p in picks}, {tuple(expected)})
+
+    def test_resolve_modifiers(self):
+        r = lambda *s: rotate.resolve_modifiers(self.catalog, list(s))  # noqa: E731
+        self.assertEqual(r(), [])
+        self.assertEqual(r("none"), [])
+        self.assertEqual(r("infantry"), ["InfantryOnly"])
+        self.assertEqual(r("KOTH_Hardcore", "hardcore"), ["Hardcore"])
+        with self.assertRaises(rotate.RotationError):
+            r("snipers")
 
     def test_no_back_to_back_maps_and_no_duplicates(self):
         picks = self.pick(count=30)
@@ -115,12 +141,14 @@ class CommandLineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "r.json"
             with contextlib.redirect_stdout(io.StringIO()):
-                code = rotate.main(["--count", "12", "--name", "Test", "--out", str(out), "--seed", "3"])
+                code = rotate.main(["--count", "12", "--name", "Test", "--out", str(out), "--seed", "3",
+                                    "--modifiers", "infantry"])
             self.assertEqual(code, 0)
             obj = json.loads(out.read_text(encoding="utf-8"))
             self.assertEqual(list(obj), rotate.TOP_KEYS)
             self.assertEqual(list(obj["entries"][0]), rotate.ENTRY_KEYS)
             self.assertEqual(len(obj["entries"]), 12)
+            self.assertTrue(all(e["modifiers"] == ["KOTH_InfantryOnly"] for e in obj["entries"]))
             self.assertEqual(rotate.validate_rotation(obj, rotate.load_catalog()), [])
 
     def test_default_filename(self):

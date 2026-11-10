@@ -1,12 +1,12 @@
 {
-  "notes": "Built from examples/export-all-options.json (a dashboard export containing every option). All lighting presets are available on every map. A blank zone (\"\") in bot exports means Default, so only the explicit Default.Circle zone is listed.",
+  "notes": "Built from examples/export-all-options.json (a dashboard export containing every option). All lighting presets are available on every map. Modifiers are optional (none = standard game mode) and can be combined. A blank zone (\"\") in bot exports means Default, so only the explicit Default.Circle zone is listed.",
   "maps": {
     "Zestafona": {
       "map": "NorthAmerica",
       "modes": {
         "KOTH": {
           "experience": "Detroit_KOTH_01",
-          "modifiers": [["KOTH_InfantryOnly"]]
+          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore" }
         }
       },
       "lighting": ["DayStartClear", "DayEarlyClear", "DayEarlyFog", "DayClear", "DayLateClear", "DayLateGray", "DayLateGrayFog", "DayLateRain", "DayEndClear"],
@@ -22,7 +22,7 @@
       "modes": {
         "KOTH": {
           "experience": "Madrid_KOTH_01",
-          "modifiers": [["KOTH_InfantryOnly"]]
+          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore" }
         }
       },
       "lighting": ["DayStartClear", "DayEarlyClear", "DayEarlyFog", "DayClear", "DayLateClear", "DayLateGray", "DayLateGrayFog", "DayLateRain", "DayEndClear"],
@@ -38,11 +38,11 @@
       "modes": {
         "KOTH": {
           "experience": "Bakurani_KOTH_02",
-          "modifiers": [["KOTH_InfantryOnly"]]
+          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore" }
         },
         "KOTH_Legacy": {
           "experience": "Bakurani_KOTH_01",
-          "modifiers": [["KOTH_InfantryOnly"]],
+          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore" },
           "legacy": true
         }
       },
