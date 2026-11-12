@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="web/style.css">
-  <script type="module" src="web/app.js"></script>
+  <link rel="stylesheet" href="web/style.css?v=5">
+  <script type="module" src="web/app.js?v=5"></script>
 </head>
 <body>
   <header class="masthead">
@@ -68,6 +68,8 @@
       </div>
       <p class="summary" id="summary"></p>
       <div id="notes" class="notes" role="status" aria-live="polite"></div>
+      <div id="issues" class="notes" role="status" aria-live="polite"></div>
+      <p class="hint order-hint" id="order-hint" hidden>Drag the handles to reorder, or select Edit to change an entry.</p>
       <ol class="order" id="order"></ol>
       <div class="actions">
         <button type="button" class="btn btn-primary" id="download">Download rotation</button>

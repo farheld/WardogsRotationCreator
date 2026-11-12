@@ -1,6 +1,7 @@
 # Generated rotations (personal output; the folder itself is kept)
 rotations/*
 !rotations/.gitkeep
+/rotation-*.json
 
 # Python
 __pycache__/

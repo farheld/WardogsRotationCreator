@@ -1,7 +1,7 @@
 import {
   buildPool, filterPool, pickEntries, maxCount, limitMessage, buildRotation, mulberry32, modifierNames,
-  zoneShort, defaultFilename, toJson,
-} from "./rotation.js";
+  zoneShort, defaultFilename, toJson, rotationIssues, pickToken, pickFromToken,
+} from "./rotation.js?v=5";
 
 const $ = (id) => document.getElementById(id);
 
@@ -35,7 +35,10 @@ const state = {
   name: "", count: 10, maps: new Set(), modifiers: new Set(), legacy: false,
   lighting: new Set(), zones: new Set(), seed: 0,
 };
-let current = null; // { rotation, filename }
+// The running order on screen: picks (pool items), whether it was edited by hand, and the
+// rotation/filename built from it.
+let current = null; // { picks, edited, rotation, filename }
+let openEditor = null; // index of the row whose editor is open
 
 const today = () => new Date().toISOString().slice(0, 10);
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
@@ -72,7 +75,20 @@ function writeUrl() {
   if (!same(state.lighting, allLighting())) p.set("l", [...state.lighting].join(","));
   if (!same(state.zones, allZones())) p.set("z", [...state.zones].map(zoneToken).join(","));
   p.set("s", state.seed);
+  if (current?.edited) p.set("o", current.picks.map(pickToken).join(","));
   history.replaceState(null, "", `${location.pathname}?${p}`);
+}
+
+/** Every valid entry for the current modifiers, ignoring the lighting/zone/map filters. */
+const fullPool = () => buildPool(catalog, [...state.modifiers]);
+
+/** Running order saved in a share link ("o" param), if it is still valid. */
+function readEditedOrder() {
+  const o = new URLSearchParams(location.search).get("o");
+  if (!o) return null;
+  const pool = fullPool();
+  const picks = o.split(",").map((t) => pickFromToken(pool, t));
+  return picks.length && picks.every(Boolean) ? picks : null;
 }
 
 // ---------- Controls ----------
@@ -166,12 +182,21 @@ function note(text, cls = "") {
   $("notes").append(p);
 }
 
+function clearOrder() {
+  current = null;
+  openEditor = null;
+  $("order").replaceChildren();
+  $("issues").replaceChildren();
+  $("order-hint").hidden = true;
+  $("summary").textContent = "";
+  setActionsEnabled(false);
+}
+
 function regenerate({ keepSeed = false } = {}) {
   if (!keepSeed) state.seed = newSeed();
-  writeUrl();
   $("notes").replaceChildren();
-  $("order").replaceChildren();
-  current = null;
+  clearOrder();
+  writeUrl();
 
   const chosenMaps = allMaps().filter((d) => state.maps.has(d));
   const pool = filterPool(buildPool(catalog, [...state.modifiers]), {
@@ -182,11 +207,7 @@ function regenerate({ keepSeed = false } = {}) {
   else if (!state.lighting.size) note("Select at least one lighting option.", "error");
   else if (!pool.length) note("Nothing matches these choices. Select lighting and a zone that a chosen map supports.", "error");
 
-  if (!pool.length) {
-    $("summary").textContent = "";
-    setActionsEnabled(false);
-    return;
-  }
+  if (!pool.length) return;
 
   const missing = chosenMaps.filter((d) => !pool.some((c) => c.display === d));
   if (missing.length)
@@ -208,51 +229,187 @@ function regenerate({ keepSeed = false } = {}) {
       });
       $("notes").lastElementChild.append(fix);
     }
-    $("summary").textContent = "";
-    setActionsEnabled(false);
     return;
   }
   if (new Set(pool.map((c) => c.display)).size === 1 && state.count > pool.length)
     note(`With one map and ${pool.length} combinations, entries repeat after every ${pool.length} maps (never twice in a row).`);
 
-  const picks = pickEntries(pool, state.count, mulberry32(state.seed));
-  const rotation = buildRotation(state.name.trim() || `Rotation ${today()}`, picks);
-  current = { rotation, filename: defaultFilename(rotation.name) };
+  current = { picks: pickEntries(pool, state.count, mulberry32(state.seed)), edited: false };
+  renderOrder();
+}
+
+// ---------- Running order (view + manual edits) ----------
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+/** Rebuild the rotation from current.picks and redraw the list. */
+function renderOrder({ focus } = {}) {
+  const { picks } = current;
+  current.rotation = buildRotation(state.name.trim() || `Rotation ${today()}`, picks);
+  current.filename = defaultFilename(current.rotation.name);
 
   const mods = [...state.modifiers].map(humanize);
   $("summary").textContent =
-    `${state.count} ${state.count === 1 ? "map" : "maps"}, ` +
+    `${picks.length} ${picks.length === 1 ? "map" : "maps"}, ` +
     (mods.length ? `${mods.join(" + ")} on every map.` : "standard game mode.");
 
+  // Warnings for hand edits that break the usual rules. They don't block the download.
+  const issues = rotationIssues(picks);
+  const flagged = new Set(issues.flatMap((i) => i.indices));
+  const box = $("issues");
+  box.replaceChildren();
+  if (current.edited) {
+    box.append(el("p", "info", "You've edited this running order. Shuffling or changing a setting replaces it."));
+  }
+  issues.forEach((i) => box.append(el("p", "", i.text)));
+
   const tags = catalog.lightingTags || {};
-  $("order").replaceChildren(...picks.map((p) => {
-    const li = document.createElement("li");
-    const sky = document.createElement("i");
-    sky.className = "sky";
+  $("order").replaceChildren(...picks.map((p, i) => {
+    const li = el("li");
+    if (flagged.has(i)) li.classList.add("has-issue");
+
+    const handle = el("button", "slot-handle");
+    handle.type = "button";
+    handle.setAttribute("aria-label", `Move map ${i + 1}, ${p.display}. Use the up and down arrow keys.`);
+    handle.innerHTML = '<svg viewBox="0 0 12 18" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></g></svg>';
+    handle.addEventListener("keydown", (e) => {
+      const to = e.key === "ArrowUp" ? i - 1 : e.key === "ArrowDown" ? i + 1 : null;
+      if (to === null) return;
+      e.preventDefault();
+      if (to < 0 || to >= picks.length) return;
+      movePick(i, to);
+      renderOrder({ focus: `[data-handle="${to}"]` });
+    });
+    handle.dataset.handle = i;
+
+    const sky = el("i", "sky");
     sky.style.setProperty("--sky", skyFor(p.entry.lighting, tags[p.entry.lighting]));
     sky.setAttribute("aria-hidden", "true");
-    const main = document.createElement("div");
-    const name = document.createElement("span");
-    name.className = "slot-map";
-    name.textContent = p.display;
-    main.append(name);
-    if (p.legacy) {
-      const lg = document.createElement("span");
-      lg.className = "slot-legacy";
-      lg.textContent = p.entry.experience;
-      main.append(lg);
-    }
-    const zone = document.createElement("span");
-    zone.className = "slot-zone";
-    zone.textContent = `${zoneShort(p.entry.zoneAlternator)} zone`;
-    main.append(zone);
-    const light = document.createElement("span");
-    light.className = "slot-light";
-    light.textContent = p.entry.lighting;
-    li.append(sky, main, light);
+
+    const main = el("div", "slot-main");
+    main.append(el("span", "slot-map", p.display));
+    if (p.legacy) main.append(el("span", "slot-legacy", p.entry.experience));
+    main.append(el("span", "slot-zone", `${zoneShort(p.entry.zoneAlternator)} zone`));
+
+    const light = el("span", "slot-light", p.entry.lighting);
+
+    const edit = el("button", "slot-edit", openEditor === i ? "Done" : "Edit");
+    edit.type = "button";
+    edit.setAttribute("aria-expanded", String(openEditor === i));
+    edit.setAttribute("aria-label", `${openEditor === i ? "Close editor for" : "Edit"} map ${i + 1}, ${p.display}`);
+    edit.dataset.edit = i;
+    edit.addEventListener("click", () => {
+      openEditor = openEditor === i ? null : i;
+      renderOrder({ focus: openEditor === i ? `#slot-${i}-map` : `[data-edit="${i}"]` });
+    });
+
+    li.append(handle, sky, main, light, edit);
+    if (openEditor === i) li.append(editorFor(i));
     return li;
   }));
+
+  $("order-hint").hidden = false;
   setActionsEnabled(true);
+  writeUrl();
+  if (focus) document.querySelector(focus)?.focus();
+}
+
+function movePick(from, to) {
+  const [moved] = current.picks.splice(from, 1);
+  current.picks.splice(to, 0, moved);
+  current.edited = true;
+  openEditor = null;
+}
+
+/** Inline editor: map, mode (if there's a choice), lighting and zone for one row. */
+function editorFor(i) {
+  const p = current.picks[i];
+  const pool = fullPool();
+  const box = el("div", "slot-editor");
+  box.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { openEditor = null; renderOrder({ focus: `[data-edit="${i}"]` }); }
+  });
+
+  const select = (key, label, options, value, onChange) => {
+    const wrap = el("label", "editor-field");
+    wrap.append(el("span", "editor-label", label));
+    const s = el("select");
+    s.id = `slot-${i}-${key}`;
+    for (const [v, text] of options) {
+      const o = el("option", "", text);
+      o.value = v;
+      o.selected = v === value;
+      s.append(o);
+    }
+    s.addEventListener("change", () => onChange(s.value));
+    wrap.append(s);
+    return wrap;
+  };
+  const uniq = (arr) => [...new Set(arr)];
+  const forMap = (d) => pool.filter((c) => c.display === d);
+  const forMode = (d, m) => forMap(d).filter((c) => c.modeName === m);
+
+  const replace = (display, modeName, lighting, zone, key) => {
+    const options = forMode(display, modeName);
+    const next =
+      options.find((c) => c.entry.lighting === lighting && c.entry.zoneAlternator === zone) ||
+      options.find((c) => c.entry.lighting === lighting) ||
+      options.find((c) => c.entry.zoneAlternator === zone) ||
+      options[0];
+    current.picks[i] = next;
+    current.edited = true;
+    renderOrder({ focus: `#slot-${i}-${key}` });
+  };
+
+  const maps = uniq(pool.map((c) => c.display));
+  box.append(select("map", "Map", maps.map((d) => [d, d]), p.display, (d) => {
+    const modes = uniq(forMap(d).map((c) => c.modeName));
+    const mode = modes.find((m) => !forMode(d, m)[0].legacy) || modes[0];
+    const zones = forMode(d, mode).map((c) => c.entry.zoneAlternator);
+    replace(d, mode, p.entry.lighting, zones.find((z) => zoneShort(z) === "Default") ?? zones[0], "map");
+  }));
+
+  const modes = uniq(forMap(p.display).map((c) => c.modeName));
+  if (modes.length > 1) {
+    box.append(select("mode", "Mode", modes.map((m) => {
+      const c = forMode(p.display, m)[0];
+      return [m, c.legacy ? `${c.entry.experience} (old spawns)` : c.entry.experience];
+    }), p.modeName, (m) => replace(p.display, m, p.entry.lighting, p.entry.zoneAlternator, "mode")));
+  }
+
+  const options = forMode(p.display, p.modeName);
+  box.append(select("lighting", "Lighting", uniq(options.map((c) => c.entry.lighting)).map((l) => [l, l]),
+    p.entry.lighting, (l) => replace(p.display, p.modeName, l, p.entry.zoneAlternator, "lighting")));
+  box.append(select("zone", "Zone", uniq(options.map((c) => c.entry.zoneAlternator)).map((z) => [z, zoneShort(z)]),
+    p.entry.zoneAlternator, (z) => replace(p.display, p.modeName, p.entry.lighting, z, "zone")));
+  return box;
+}
+
+// Drag and drop (mouse and touch) via SortableJS. If it can't load, the keyboard and the
+// arrow keys on each handle still reorder the list.
+async function enableDragging() {
+  try {
+    const { default: Sortable } = await import("https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/modular/sortable.esm.js");
+    Sortable.create($("order"), {
+      handle: ".slot-handle",
+      animation: 150,
+      forceFallback: true, // pointer-based dragging: same behaviour for mouse and touch
+      fallbackTolerance: 3,
+      ghostClass: "is-ghost",
+      chosenClass: "is-chosen",
+      onEnd: ({ oldIndex, newIndex }) => {
+        if (!current || oldIndex === newIndex) return;
+        movePick(oldIndex, newIndex);
+        renderOrder();
+      },
+    });
+  } catch {
+    // Keyboard reordering still works.
+  }
 }
 
 function setActionsEnabled(on) {
@@ -300,7 +457,8 @@ function wireActions() {
 
   $("name").addEventListener("input", (e) => {
     state.name = e.target.value;
-    regenerate({ keepSeed: true });
+    if (current) renderOrder(); // renaming keeps the running order, including edits
+    else writeUrl();
   });
   $("count").addEventListener("input", (e) => {
     const n = parseInt(e.target.value, 10);
@@ -331,7 +489,16 @@ async function start() {
   ];
   renderControls();
   wireActions();
-  regenerate({ keepSeed: true });
+  enableDragging();
+  const edited = readEditedOrder();
+  if (edited) {
+    state.count = edited.length;
+    $("count").value = edited.length;
+    current = { picks: edited, edited: true };
+    renderOrder();
+  } else {
+    regenerate({ keepSeed: true });
+  }
 }
 
 start();

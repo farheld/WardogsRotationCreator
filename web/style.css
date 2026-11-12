@@ -166,11 +166,54 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: var(--olive
 .order li {
   counter-increment: slot;
   display: grid;
-  grid-template-columns: 2.25rem 56px minmax(0, 1fr) auto;
-  gap: 14px; align-items: center;
+  grid-template-columns: 28px 1.75rem 56px minmax(0, 1fr) auto auto;
+  column-gap: 12px; row-gap: 10px; align-items: center;
   padding: 9px 0;
   border-top: 1px solid var(--rule);
+  background: var(--panel);
 }
+.order li.has-issue { box-shadow: inset 4px 0 0 var(--signal); }
+.order li.is-ghost { opacity: 0.35; }
+.order li.is-chosen { background: color-mix(in srgb, var(--ink) 6%, var(--panel)); }
+
+.slot-handle {
+  order: -1;
+  display: grid; place-items: center;
+  width: 28px; height: 40px; padding: 0;
+  border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--ink-soft);
+  cursor: grab; touch-action: none;
+}
+.slot-handle:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.slot-handle:active { cursor: grabbing; }
+.slot-handle svg { width: 10px; height: 16px; }
+
+.slot-edit {
+  min-height: 34px; padding: 4px 12px;
+  border: 1.5px solid var(--rule); border-radius: var(--radius-sm);
+  background: transparent; color: var(--ink);
+  font: 600 0.875rem var(--font-body); cursor: pointer;
+}
+.slot-edit:hover, .slot-edit[aria-expanded="true"] { border-color: var(--ink); }
+
+.slot-editor {
+  grid-column: 1 / -1;
+  display: flex; flex-wrap: wrap; gap: 12px;
+  padding: 12px; margin-left: 40px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--ink) 5%, var(--panel));
+}
+.editor-field { display: grid; gap: 4px; flex: 1 1 9rem; }
+.editor-label { font: 600 1rem/1.2 var(--font-display); }
+.slot-editor select {
+  width: 100%; min-height: 38px; padding: 6px 8px;
+  border: 1.5px solid var(--rule); border-radius: var(--radius-sm);
+  background: var(--panel); color: var(--ink); font: inherit;
+}
+.slot-editor select:focus { border-color: var(--olive); }
+
+.order-hint { margin: 0 0 6px; }
+.notes p.info { background: color-mix(in srgb, var(--olive) 14%, var(--panel)); }
 .order li:first-child { border-top: 0; }
 .order li::before {
   content: counter(slot);
@@ -212,9 +255,15 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: var(--olive
   .footer { padding: 8px 16px 32px; }
   .field-row { grid-template-columns: 1fr 7.5rem; }
   .output { padding: 16px 14px; }
-  .order li { grid-template-columns: 1.5rem 44px minmax(0, 1fr); gap: 10px; }
+  .order li { grid-template-columns: 24px 1.25rem 44px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 6px; }
   .order .sky { width: 44px; height: 34px; }
-  .slot-light { grid-column: 3; text-align: left; margin-top: -4px; }
+  .slot-main { grid-column: 4; grid-row: 1; }
+  .slot-light { grid-column: 4; grid-row: 2; text-align: left; margin-top: -4px; }
+  .slot-edit { grid-column: 5; grid-row: 1 / span 2; }
+  .slot-handle { grid-row: 1 / span 2; width: 24px; }
+  .order li::before { grid-row: 1 / span 2; }
+  .order .sky { grid-row: 1 / span 2; }
+  .slot-editor { margin-left: 0; }
   .actions .btn { flex: 1 1 auto; }
 }
 

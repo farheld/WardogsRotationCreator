@@ -202,6 +202,39 @@ function pickSingleMap(pool, count, rng) {
   return picks.slice(0, count);
 }
 
+/**
+ * Rule problems in a running order (e.g. after manual edits).
+ * Returns [{ indices: [i, j], text }] with 0-based indices; text uses 1-based positions.
+ */
+export function rotationIssues(picks) {
+  const issues = [];
+  const singleMap = new Set(picks.map((p) => p.display)).size === 1;
+  for (let i = 1; i < picks.length; i++) {
+    const a = picks[i - 1], b = picks[i];
+    if (singleMap) {
+      if (entryKey(a.entry) === entryKey(b.entry))
+        issues.push({ indices: [i - 1, i], text: `Maps ${i} and ${i + 1} are the same entry back to back.` });
+    } else if (a.display === b.display) {
+      issues.push({ indices: [i - 1, i], text: `Maps ${i} and ${i + 1} are both ${b.display}.` });
+    }
+  }
+  if (!singleMap) {
+    const seen = new Map();
+    picks.forEach((p, i) => {
+      const k = entryKey(p.entry);
+      if (seen.has(k)) issues.push({ indices: [seen.get(k), i], text: `Maps ${seen.get(k) + 1} and ${i + 1} are identical.` });
+      else seen.set(k, i);
+    });
+  }
+  return issues;
+}
+
+/** Short, readable id for one entry, used in share links: "Ozeti~KOTH~DayClear~River". */
+export const pickToken = (p) =>
+  [p.display, p.modeName, p.entry.lighting, zoneShort(p.entry.zoneAlternator)].join("~");
+
+export const pickFromToken = (pool, token) => pool.find((c) => pickToken(c) === token) || null;
+
 export function buildRotation(name, picks, mode = "Ordered") {
   return {
     kind: "wardogs-rotation",

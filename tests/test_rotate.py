@@ -243,6 +243,11 @@ class WebParityTests(unittest.TestCase):
                 used_legacy = {e["experience"] for e in entries} & legacy
                 self.assertEqual(bool(used_legacy), bool(opts.get("includeLegacy")))
 
+    def test_web_edit_helpers(self):
+        result = subprocess.run(["node", str(ROOT / "tests" / "web_edits.mjs")],
+                                capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_web_refuses_too_many_maps(self):
         result = subprocess.run(["node", str(ROOT / "tests" / "web_generate.mjs"),
                                  json.dumps(dict(count=10, maps=["Sabatulo", "Ozeti"]))],

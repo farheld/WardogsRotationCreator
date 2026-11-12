@@ -19,10 +19,18 @@ is free, needs no install, and runs entirely in your browser.
 1. Pick your maps, game mode, lighting and zones. Everything is selected by default except the
    modifiers, which default to the standard game mode.
 2. Use **Shuffle** until you like the running order.
-3. Select **Download rotation**, then import the file in the dashboard under **Rotation**.
+3. Fine-tune it by hand if you want:
+   - **Reorder:** drag a row by its handle (⠿). With the keyboard, focus the handle and use the
+     up and down arrow keys.
+   - **Change an entry:** select **Edit** on a row to pick its map, lighting and zone (and mode,
+     where a map has more than one). The options are everything that map supports, even if you
+     filtered it out above.
+   - The page warns, but doesn't stop you, if an edit puts the same map twice in a row or repeats
+     an entry. Shuffling or changing a setting replaces your edits.
+4. Select **Download rotation**, then import the file in the dashboard under **Rotation**.
 
-**Copy share link** gives a link that opens the exact same rotation and settings, which is
-handy for sharing in Discord.
+**Copy share link** gives a link that opens the exact same rotation and settings, including
+your edits, which is handy for sharing in Discord.
 
 ## Use it on your computer
 
@@ -208,6 +216,12 @@ python -m http.server 8000   # preview the website at http://localhost:8000
 The website is a static page served by GitHub Pages from the root of `main`. There is no build
 step and no server. If you open `index.html` straight from disk, the browser blocks it from
 loading the catalog, so use a local server as shown above.
+
+When you change files in `web/`, bump the `?v=` number on the links in `index.html` and on the
+`rotation.js` import in `web/app.js`. GitHub Pages caches files for about 10 minutes, and the
+version number makes browsers load the new files together. Drag and drop uses
+[SortableJS](https://sortablejs.github.io/Sortable/), loaded from a CDN. If it can't load, the
+keyboard reordering still works.
 
 The tests check that the example exports validate, that generated rotations follow the format
 and the rules (no back-to-back maps, no duplicates, balanced maps, legacy modes opt-in, the same
