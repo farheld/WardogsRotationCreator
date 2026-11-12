@@ -203,6 +203,52 @@ function pickSingleMap(pool, count, rng) {
 }
 
 /**
+ * Shuffle the order of the existing entries without changing them.
+ * Several maps: the same map never plays twice in a row. One map: the same entry never plays
+ * twice in a row. If hand edits make that impossible, it gets as close as it can.
+ */
+export function shuffleOrder(picks, rng) {
+  const singleMap = new Set(picks.map((p) => p.display)).size === 1;
+  const keyOf = singleMap ? (p) => entryKey(p.entry) : (p) => p.display;
+  const groups = new Map();
+  for (const p of shuffle([...picks], rng)) {
+    const k = keyOf(p);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(p);
+  }
+  const remaining = new Map([...groups].map(([k, v]) => [k, v.length]));
+  const left = () => [...remaining.values()].reduce((a, b) => a + b, 0);
+
+  // After placing `placed`, can the rest still be ordered with no key twice in a row?
+  const stillPossible = (placed) => {
+    const sum = left();
+    if (!sum) return true;
+    const max = Math.max(...remaining.values());
+    const maxKeys = [...remaining].filter(([, v]) => v === max).map(([k]) => k);
+    const rest = sum - max;
+    return max <= (maxKeys.length === 1 && maxKeys[0] === placed ? rest : rest + 1);
+  };
+
+  const out = [];
+  let prev = null;
+  while (left()) {
+    const open = [...remaining.keys()].filter((k) => remaining.get(k) > 0);
+    const options = open.filter((k) => k !== prev);
+    const safe = options.filter((k) => {
+      remaining.set(k, remaining.get(k) - 1);
+      const ok = stillPossible(k);
+      remaining.set(k, remaining.get(k) + 1);
+      return ok;
+    });
+    const k = choice(safe.length ? safe : options.length ? options : open, rng);
+    remaining.set(k, remaining.get(k) - 1);
+    out.push(groups.get(k).pop());
+    prev = k;
+  }
+  return out;
+}
+
+/**
  * Rule problems in a running order (e.g. after manual edits).
  * Returns [{ indices: [i, j], text }] with 0-based indices; text uses 1-based positions.
  */

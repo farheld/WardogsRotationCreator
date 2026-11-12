@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="web/style.css?v=5">
-  <script type="module" src="web/app.js?v=5"></script>
+  <link rel="stylesheet" href="web/style.css?v=6">
+  <script type="module" src="web/app.js?v=6"></script>
 </head>
 <body>
   <header class="masthead">
@@ -64,7 +64,10 @@
     <section class="output" aria-labelledby="output-title">
       <div class="output-head">
         <h2 id="output-title">Running order</h2>
-        <button type="button" class="btn btn-quiet" id="shuffle">Shuffle</button>
+        <div class="output-tools">
+          <button type="button" class="btn btn-quiet" id="shuffle">Shuffle order</button>
+          <button type="button" class="btn btn-quiet" id="regenerate">New rotation</button>
+        </div>
       </div>
       <p class="summary" id="summary"></p>
       <div id="notes" class="notes" role="status" aria-live="polite"></div>

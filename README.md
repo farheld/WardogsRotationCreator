@@ -18,7 +18,8 @@ is free, needs no install, and runs entirely in your browser.
 
 1. Pick your maps, game mode, lighting and zones. Everything is selected by default except the
    modifiers, which default to the standard game mode.
-2. Use **Shuffle** until you like the running order.
+2. Use **New rotation** to pick a fresh set of entries, and **Shuffle order** to rearrange the
+   current entries without changing them. Neither puts the same map twice in a row.
 3. Fine-tune it by hand if you want:
    - **Reorder:** drag a row by its handle (⠿). With the keyboard, focus the handle and use the
      up and down arrow keys.
@@ -26,7 +27,8 @@ is free, needs no install, and runs entirely in your browser.
      where a map has more than one). The options are everything that map supports, even if you
      filtered it out above.
    - The page warns, but doesn't stop you, if an edit puts the same map twice in a row or repeats
-     an entry. Shuffling or changing a setting replaces your edits.
+     an entry. **Shuffle order** keeps your edited entries; **New rotation** or changing a setting
+     replaces them.
 4. Select **Download rotation**, then import the file in the dashboard under **Rotation**.
 
 **Copy share link** gives a link that opens the exact same rotation and settings, including

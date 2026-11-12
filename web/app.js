@@ -1,7 +1,7 @@
 import {
   buildPool, filterPool, pickEntries, maxCount, limitMessage, buildRotation, mulberry32, modifierNames,
-  zoneShort, defaultFilename, toJson, rotationIssues, pickToken, pickFromToken,
-} from "./rotation.js?v=5";
+  zoneShort, defaultFilename, toJson, rotationIssues, pickToken, pickFromToken, shuffleOrder,
+} from "./rotation.js?v=6";
 
 const $ = (id) => document.getElementById(id);
 
@@ -35,9 +35,10 @@ const state = {
   name: "", count: 10, maps: new Set(), modifiers: new Set(), legacy: false,
   lighting: new Set(), zones: new Set(), seed: 0,
 };
-// The running order on screen: picks (pool items), whether it was edited by hand, and the
+// The running order on screen: picks (pool items), whether it was edited by hand (edited),
+// whether it differs from what the seed generates (custom, saved in share links), and the
 // rotation/filename built from it.
-let current = null; // { picks, edited, rotation, filename }
+let current = null; // { picks, edited, custom, rotation, filename }
 let openEditor = null; // index of the row whose editor is open
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -75,7 +76,7 @@ function writeUrl() {
   if (!same(state.lighting, allLighting())) p.set("l", [...state.lighting].join(","));
   if (!same(state.zones, allZones())) p.set("z", [...state.zones].map(zoneToken).join(","));
   p.set("s", state.seed);
-  if (current?.edited) p.set("o", current.picks.map(pickToken).join(","));
+  if (current?.custom) p.set("o", current.picks.map(pickToken).join(","));
   history.replaceState(null, "", `${location.pathname}?${p}`);
 }
 
@@ -234,7 +235,7 @@ function regenerate({ keepSeed = false } = {}) {
   if (new Set(pool.map((c) => c.display)).size === 1 && state.count > pool.length)
     note(`With one map and ${pool.length} combinations, entries repeat after every ${pool.length} maps (never twice in a row).`);
 
-  current = { picks: pickEntries(pool, state.count, mulberry32(state.seed)), edited: false };
+  current = { picks: pickEntries(pool, state.count, mulberry32(state.seed)), edited: false, custom: false };
   renderOrder();
 }
 
@@ -263,7 +264,7 @@ function renderOrder({ focus } = {}) {
   const box = $("issues");
   box.replaceChildren();
   if (current.edited) {
-    box.append(el("p", "info", "You've edited this running order. Shuffling or changing a setting replaces it."));
+    box.append(el("p", "info", "You've edited this running order. New rotation or changing a setting replaces it."));
   }
   issues.forEach((i) => box.append(el("p", "", i.text)));
 
@@ -321,7 +322,7 @@ function renderOrder({ focus } = {}) {
 function movePick(from, to) {
   const [moved] = current.picks.splice(from, 1);
   current.picks.splice(to, 0, moved);
-  current.edited = true;
+  current.edited = current.custom = true;
   openEditor = null;
 }
 
@@ -361,7 +362,7 @@ function editorFor(i) {
       options.find((c) => c.entry.zoneAlternator === zone) ||
       options[0];
     current.picks[i] = next;
-    current.edited = true;
+    current.edited = current.custom = true;
     renderOrder({ focus: `#slot-${i}-${key}` });
   };
 
@@ -453,7 +454,15 @@ function wireActions() {
   });
   $("copy-json").addEventListener("click", () => current && copy(toJson(current.rotation), "Copied JSON"));
   $("copy-link").addEventListener("click", () => copy(location.href, "Copied share link"));
-  $("shuffle").addEventListener("click", () => regenerate());
+  $("shuffle").addEventListener("click", () => {
+    if (!current) return;
+    current.picks = shuffleOrder(current.picks, mulberry32(newSeed()));
+    current.custom = true;
+    openEditor = null;
+    renderOrder();
+    toast("Shuffled the order");
+  });
+  $("regenerate")?.addEventListener("click", () => regenerate()); // may be missing from a cached older page
 
   $("name").addEventListener("input", (e) => {
     state.name = e.target.value;
@@ -494,7 +503,7 @@ async function start() {
   if (edited) {
     state.count = edited.length;
     $("count").value = edited.length;
-    current = { picks: edited, edited: true };
+    current = { picks: edited, edited: false, custom: true };
     renderOrder();
   } else {
     regenerate({ keepSeed: true });
