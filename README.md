@@ -63,33 +63,51 @@ Maps to include - numbers separated by commas, Enter for all maps:
 | Zestafona | `NorthAmerica` | `Detroit_KOTH_01` | Default, Houses, SmallFactory, WaterTreatment |
 | Ozeti | `Europe` | `Madrid_KOTH_01` | Default, Church, Farmland, River |
 | Bakurani | `Kavkazi` | `Bakurani_KOTH_02` (`Bakurani_KOTH_01` legacy, opt-in) | Default, Farmland, Lumberyard |
+| Sabatulo | `Russia` | `Moscow_KOTH_01` | Default only |
 
-All maps support every lighting preset:
+Lighting presets and the maps that allow them:
 
-| Lighting | Tags |
-|---|---|
-| `DayStartClear` | dawn, clear |
-| `DayEarlyClear` | morning, clear |
-| `DayEarlyFog` | morning, fog |
-| `DayClear` | midday, clear |
-| `DayLateClear` | afternoon, clear |
-| `DayLateGray` | afternoon, overcast |
-| `DayLateGrayFog` | afternoon, overcast, fog |
-| `DayLateRain` | afternoon, rain |
-| `DayEndClear` | dusk, clear |
+| Lighting | Tags | Maps |
+|---|---|---|
+| `DayStartClear` | dawn, clear | All except Sabatulo |
+| `DayEarlyClear` | morning, clear | All except Sabatulo |
+| `DayEarlyFog` | morning, fog | All except Sabatulo |
+| `DayClear` | midday, clear | All |
+| `DayLateClear` | afternoon, clear | All |
+| `DayLateGray` | afternoon, overcast | All |
+| `DayLateGrayFog` | afternoon, overcast, fog | All except Sabatulo |
+| `DayLateRain` | afternoon, rain | All |
+| `DayEndClear` | dusk, clear | All except Sabatulo |
 
 `Bakurani_KOTH_01` (the old spawns) is never picked unless you ask for it.
 
+Sabatulo has only 4 lighting/zone combinations. In long rotations, it appears up to 4 times and
+then steps aside, so the rotation doesn't have to repeat an entry.
+
 ### Modifiers
 
-By default, rotations use the **standard game mode** (no modifiers). You can add either or both
+By default, rotations use the **standard game mode** (no modifiers). You can add any combination
 of these modifiers. Whatever you choose applies to **every map in the rotation**, so the game mode
 never changes between maps.
 
-| Modifier | Id |
-|---|---|
-| InfantryOnly | `KOTH_InfantryOnly` |
-| Hardcore | `KOTH_Hardcore` |
+| Modifier | Id | What it does |
+|---|---|---|
+| InfantryOnly | `KOTH_InfantryOnly` | Infantry only |
+| Hardcore | `KOTH_Hardcore` | Hardcore rules |
+| LimitedGear | `KOTH_LimitedGear` | Limits the vendor to a fixed item list, and turns off some stationary weapons and the hot-zone magnet buildable |
+
+### Server allow lists (Season 03)
+
+Your server skips any rotation entry whose map, game mode or modifier isn't on its allow lists.
+The lists live in your hosting provider's patch `Game.ini`; they can't be set in `server.ini`.
+To use Sabatulo and Limited Gear, make sure your provider's `Game.ini` includes:
+
+```ini
+[/Script/WDGame.WDServerMapRotationSettings]
++AllowedMaps=Russia
++AllowedExperiences=Moscow_KOTH_01
++AllowedExperiences=KOTH_LimitedGear
+```
 
 ## Command-line mode
 
@@ -100,7 +118,7 @@ python rotate.py --count 10                        # all maps, balanced, no back
 python rotate.py --name "Night Ops" --count 12
 python rotate.py --maps Bakurani                   # single map
 python rotate.py --modifiers InfantryOnly          # infantry only on every map
-python rotate.py --modifiers InfantryOnly Hardcore # both modifiers on every map
+python rotate.py --modifiers InfantryOnly LimitedGear  # stack modifiers on every map
 python rotate.py --weather rain fog                # only lighting tagged rain or fog
 python rotate.py --exclude-weather fog
 python rotate.py --lighting DayClear DayLateRain   # exact lighting presets

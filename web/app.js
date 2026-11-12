@@ -180,7 +180,7 @@ function regenerate({ keepSeed = false } = {}) {
 
   if (!chosenMaps.length) note("Select at least one map.", "error");
   else if (!state.lighting.size) note("Select at least one lighting option.", "error");
-  else if (!pool.length) note("Nothing matches these choices. Select at least one zone for a chosen map.", "error");
+  else if (!pool.length) note("Nothing matches these choices. Select lighting and a zone that a chosen map supports.", "error");
 
   if (!pool.length) {
     $("summary").textContent = "";
@@ -189,7 +189,9 @@ function regenerate({ keepSeed = false } = {}) {
   }
 
   const missing = chosenMaps.filter((d) => !pool.some((c) => c.display === d));
-  if (missing.length) note(`No zones are selected for ${missing.join(" and ")}, so ${missing.length > 1 ? "they're" : "it's"} left out.`);
+  if (missing.length)
+    note(`None of the selected lighting or zones are available on ${missing.join(" and ")}, ` +
+         `so ${missing.length > 1 ? "they're" : "it's"} left out.`);
   if (state.count > pool.length)
     note(`These choices allow only ${pool.length} different combinations, so some of the ${state.count} maps repeat.`);
 

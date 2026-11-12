@@ -1,12 +1,12 @@
 {
-  "notes": "Built from examples/export-all-options.json (a dashboard export containing every option). All lighting presets are available on every map. Modifiers are optional (none = standard game mode) and can be combined. A blank zone (\"\") in bot exports means Default, so only the explicit Default.Circle zone is listed.",
+  "notes": "Built from examples/export-all-options.json (a dashboard export containing every option). Sabatulo (Season 03) only allows DayClear, DayLateClear, DayLateGray and DayLateRain, and has no zone alternators yet, so it uses the blank zone. The other maps allow every lighting preset. Modifiers are optional (none = standard game mode) and can be combined. A blank zone (\"\") means Default, so maps that have an explicit Default.Circle zone list that instead.",
   "maps": {
     "Zestafona": {
       "map": "NorthAmerica",
       "modes": {
         "KOTH": {
           "experience": "Detroit_KOTH_01",
-          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore" }
+          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore", "LimitedGear": "KOTH_LimitedGear" }
         }
       },
       "lighting": ["DayStartClear", "DayEarlyClear", "DayEarlyFog", "DayClear", "DayLateClear", "DayLateGray", "DayLateGrayFog", "DayLateRain", "DayEndClear"],
@@ -22,7 +22,7 @@
       "modes": {
         "KOTH": {
           "experience": "Madrid_KOTH_01",
-          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore" }
+          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore", "LimitedGear": "KOTH_LimitedGear" }
         }
       },
       "lighting": ["DayStartClear", "DayEarlyClear", "DayEarlyFog", "DayClear", "DayLateClear", "DayLateGray", "DayLateGrayFog", "DayLateRain", "DayEndClear"],
@@ -38,11 +38,11 @@
       "modes": {
         "KOTH": {
           "experience": "Bakurani_KOTH_02",
-          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore" }
+          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore", "LimitedGear": "KOTH_LimitedGear" }
         },
         "KOTH_Legacy": {
           "experience": "Bakurani_KOTH_01",
-          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore" },
+          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore", "LimitedGear": "KOTH_LimitedGear" },
           "legacy": true
         }
       },
@@ -52,6 +52,17 @@
         "ZoneAlternator.Bakurani.Farmland.Circle",
         "ZoneAlternator.Bakurani.Lumberyard.Circle"
       ]
+    },
+    "Sabatulo": {
+      "map": "Russia",
+      "modes": {
+        "KOTH": {
+          "experience": "Moscow_KOTH_01",
+          "modifiers": { "InfantryOnly": "KOTH_InfantryOnly", "Hardcore": "KOTH_Hardcore", "LimitedGear": "KOTH_LimitedGear" }
+        }
+      },
+      "lighting": ["DayClear", "DayLateClear", "DayLateGray", "DayLateRain"],
+      "zones": [""]
     }
   },
   "lightingTags": {

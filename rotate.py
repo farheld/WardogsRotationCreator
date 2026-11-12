@@ -34,9 +34,9 @@ def load_catalog(path: Path = CATALOG_PATH) -> dict:
 
 
 def zone_label(zone: str) -> str:
-    """'ZoneAlternator.Bakurani.Farmland.Circle' -> 'Farmland.Circle'; '' -> 'Default (blank)'."""
+    """'ZoneAlternator.Bakurani.Farmland.Circle' -> 'Farmland.Circle'; '' -> 'Default'."""
     if not zone:
-        return "Default (blank)"
+        return "Default"
     parts = zone.split(".")
     return ".".join(parts[2:]) if len(parts) > 2 else zone
 
@@ -187,7 +187,8 @@ def filter_pool(pool: list[dict], catalog: dict, args) -> list[dict]:
 
 def pick_entries(pool: list[dict], count: int, rng: random.Random, allow_repeats: bool) -> list[dict]:
     """Balanced pick: least-used map first, never the same map back-to-back
-    (when more than one map is available), no duplicate entries unless the pool runs out."""
+    (when more than one map is available), no duplicate entries unless the pool runs out.
+    A map that has used up all its combinations steps aside while others still have fresh ones."""
     if not pool:
         raise RotationError("No combinations match those filters.")
 
@@ -203,6 +204,10 @@ def pick_entries(pool: list[dict], count: int, rng: random.Random, allow_repeats
 
     for _ in range(count):
         choices = [m for m in map_names if m != prev] or map_names
+        if not allow_repeats:
+            fresh = [m for m in choices
+                     if any(entry_key(c["entry"]) not in used_keys for c in by_map[m])]
+            choices = fresh or choices
         least = min(map_uses[m] for m in choices)
         choices = [m for m in choices if map_uses[m] == least]
         rng.shuffle(choices)
@@ -509,8 +514,9 @@ def interactive(catalog: dict) -> int:
             wanted = args.maps or list(catalog["maps"])
             missing = [m for m in wanted if not any(c["display"] == m for c in pool)]
             if missing:
-                print(f"\nNote: your choices leave nothing for {', '.join(missing)} "
-                      f"(check its zones/modifiers), so it won't appear in this rotation.")
+                print(f"\nNote: none of the chosen lighting or zones are available on "
+                      f"{' and '.join(missing)}, so {'it' if len(missing) == 1 else 'they'} "
+                      f"won't appear in this rotation.")
             if count > len(pool):
                 print(f"\nNote: your choices only allow {len(pool)} different combinations, "
                       f"so some of the {count} maps will repeat.")

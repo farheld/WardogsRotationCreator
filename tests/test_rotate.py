@@ -37,11 +37,12 @@ class CatalogTests(unittest.TestCase):
             for light in m["lighting"]:
                 self.assertIn(light, tags, f"{name}: {light} has no lightingTags entry")
 
-    def test_zones_are_explicit_and_have_a_default(self):
+    def test_zones_have_exactly_one_default(self):
         for name, m in self.catalog["maps"].items():
-            self.assertNotIn("", m["zones"], f"{name}: use the explicit Default zone, not ''")
-            self.assertTrue(any(rotate.is_default_zone(z) for z in m["zones"]),
-                            f"{name}: no Default zone listed")
+            defaults = [z for z in m["zones"] if rotate.is_default_zone(z)]
+            self.assertEqual(len(defaults), 1, f"{name}: list either '' or the explicit Default zone, not both")
+            if "" in m["zones"]:
+                self.assertEqual(m["zones"], [""], f"{name}: '' is only for maps with no zone alternators")
 
 
 class ValidationTests(unittest.TestCase):
@@ -92,6 +93,22 @@ class GenerationTests(unittest.TestCase):
                 picks = self.pick(count=30, modifiers=chosen)
                 self.assertEqual({tuple(p["entry"]["modifiers"]) for p in picks}, {tuple(expected)})
 
+    def test_sabatulo_only_uses_its_lighting(self):
+        allowed = {"DayClear", "DayLateClear", "DayLateGray", "DayLateRain"}
+        picks = self.pick(count=12, maps=["Sabatulo"], modifiers=["LimitedGear"])
+        for p in picks:
+            self.assertEqual(p["entry"]["map"], "Russia")
+            self.assertEqual(p["entry"]["experience"], "Moscow_KOTH_01")
+            self.assertIn(p["entry"]["lighting"], allowed)
+            self.assertEqual(p["entry"]["modifiers"], ["KOTH_LimitedGear"])
+        self.assertEqual({p["entry"]["lighting"] for p in picks}, allowed)
+
+    def test_limited_gear_goes_after_other_modifiers(self):
+        picks = self.pick(count=12, modifiers=["LimitedGear", "InfantryOnly"])
+        self.assertEqual({tuple(p["entry"]["modifiers"]) for p in picks},
+                         {("KOTH_InfantryOnly", "KOTH_LimitedGear")})
+        self.assertEqual({p["display"] for p in picks}, set(self.catalog["maps"]))
+
     def test_resolve_modifiers(self):
         r = lambda *s: rotate.resolve_modifiers(self.catalog, list(s))  # noqa: E731
         self.assertEqual(r(), [])
@@ -108,11 +125,22 @@ class GenerationTests(unittest.TestCase):
         keys = [rotate.entry_key(p["entry"]) for p in picks]
         self.assertEqual(len(keys), len(set(keys)))
 
-    def test_maps_are_balanced(self):
+    def count_maps(self, picks):
         counts = {}
-        for p in self.pick(count=30):
+        for p in picks:
             counts[p["display"]] = counts.get(p["display"], 0) + 1
+        return counts
+
+    def test_maps_are_balanced(self):
+        # 16 maps fits within Sabatulo's 4 combinations, so every map gets 4.
+        counts = self.count_maps(self.pick(count=16))
         self.assertLessEqual(max(counts.values()) - min(counts.values()), 1)
+
+    def test_small_map_steps_aside_instead_of_repeating(self):
+        counts = self.count_maps(self.pick(count=30))
+        self.assertEqual(counts["Sabatulo"], 4)
+        others = [v for k, v in counts.items() if k != "Sabatulo"]
+        self.assertLessEqual(max(others) - min(others), 1)
 
     def test_same_seed_same_rotation(self):
         self.assertEqual(self.pick(seed=42), self.pick(seed=42))

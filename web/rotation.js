@@ -110,6 +110,9 @@ export function pickEntries(pool, count, rng) {
   for (let i = 0; i < count; i++) {
     let choices = mapNames.filter((m) => m !== prev);
     if (!choices.length) choices = mapNames;
+    // A map that has used up its combinations steps aside while others still have fresh ones.
+    const fresh = choices.filter((m) => byMap.get(m).some((c) => !used.has(entryKey(c.entry))));
+    if (fresh.length) choices = fresh;
     const least = Math.min(...choices.map((m) => uses.get(m)));
     choices = shuffle(choices.filter((m) => uses.get(m) === least), rng);
 
