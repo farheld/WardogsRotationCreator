@@ -73,7 +73,7 @@ Maps to include - numbers separated by commas, Enter for all maps:
 | Zestafona | `NorthAmerica` | `Detroit_KOTH_01` | Default, Houses, SmallFactory, WaterTreatment |
 | Ozeti | `Europe` | `Madrid_KOTH_01` | Default, Church, Farmland, River |
 | Bakurani | `Kavkazi` | `Bakurani_KOTH_02` (`Bakurani_KOTH_01` legacy, opt-in) | Default, Farmland, Lumberyard |
-| Sabatulo | `Russia` | `Moscow_KOTH_01` | Default only |
+| Sabatulo | `Russia` | `Moscow_KOTH_01` | Default, Bazaar, Hillside, Hospital, River |
 
 Lighting presets and the maps that allow them:
 
@@ -95,9 +95,9 @@ Lighting presets and the maps that allow them:
 
 - **Several maps:** no entry is ever repeated, and the same map never plays twice in a row. Maps
   are spread as evenly as their number of combinations allows. If you ask for more maps than
-  that allows, the tool tells you the maximum and offers to use it. For example, Sabatulo has only
-  4 lighting/zone combinations, so Sabatulo + Ozeti allows at most 9 maps: 4 Sabatulo entries
-  with Ozeti between and around them.
+  that allows, the tool tells you the maximum and offers to use it. For example, Sabatulo + Ozeti
+  with only `DayClear` lighting has 5 Sabatulo and 4 Ozeti combinations, so it allows at most
+  9 maps.
 - **One map:** entries can repeat, which lets you build, for example, a 10-map rotation of a
   single map. Every combination is used before any repeats, and the same entry never plays twice
   in a row.
@@ -188,8 +188,11 @@ follow the same rules.
 }
 ```
 
-A blank `zoneAlternator` (`""`) in a dashboard export means the map's Default zone. This tool
-always writes the explicit Default zone instead.
+A blank `zoneAlternator` (`""`) in a dashboard export means the map's Default zone. Where a map
+has an explicit Default zone (e.g. `ZoneAlternator.Ozeti.Default.Circle`), this tool writes that
+instead. Sabatulo has no explicit Default zone, so its Default stays blank. Sabatulo's zone ids
+are spelled `Sabartulo` (e.g. `ZoneAlternator.Sabartulo.Hospital.Circle`), exactly as the
+dashboard exports them.
 
 ## Updating the catalog
 

@@ -37,11 +37,10 @@ class CatalogTests(unittest.TestCase):
                 self.assertIn(light, tags, f"{name}: {light} has no lightingTags entry")
 
     def test_zones_have_exactly_one_default(self):
+        # Maps with an explicit ...Default.Circle zone list that; others (Sabatulo) use "".
         for name, m in self.catalog["maps"].items():
             defaults = [z for z in m["zones"] if rotate.is_default_zone(z)]
             self.assertEqual(len(defaults), 1, f"{name}: list either '' or the explicit Default zone, not both")
-            if "" in m["zones"]:
-                self.assertEqual(m["zones"], [""], f"{name}: '' is only for maps with no zone alternators")
 
 
 class ValidationTests(unittest.TestCase):
@@ -93,33 +92,38 @@ class GenerationTests(unittest.TestCase):
                 self.assertEqual({tuple(p["entry"]["modifiers"]) for p in picks}, {tuple(expected)})
 
     def test_several_maps_never_repeat_and_stop_at_the_limit(self):
-        pool = rotate.filter_pool(self.pool, self.catalog, make_args(maps=["Sabatulo", "Ozeti"]))
-        self.assertEqual(rotate.max_count(pool), 9)  # 4 Sabatulo entries need 5 Ozeti between/around them
-        picks = self.pick(count=9, maps=["Sabatulo", "Ozeti"])
+        tight = dict(maps=["Sabatulo", "Ozeti"], lighting=["DayClear"])  # 5 Sabatulo + 4 Ozeti combinations
+        pool = rotate.filter_pool(self.pool, self.catalog, make_args(**tight))
+        self.assertEqual(rotate.max_count(pool), 9)
+        picks = self.pick(count=9, **tight)
         keys = [rotate.entry_key(p["entry"]) for p in picks]
         self.assertEqual(len(set(keys)), 9)
         maps = [p["display"] for p in picks]
         self.assertTrue(all(a != b for a, b in zip(maps, maps[1:])))
         with self.assertRaisesRegex(rotate.RotationError, "at most 9 maps"):
-            self.pick(count=10, maps=["Sabatulo", "Ozeti"])
+            self.pick(count=10, **tight)
+        pool = rotate.filter_pool(self.pool, self.catalog, make_args(maps=["Sabatulo", "Ozeti"]))
+        self.assertEqual(rotate.max_count(pool), 41)  # 20 Sabatulo entries need 21 Ozeti around them
 
     def test_single_map_repeats_but_never_back_to_back(self):
-        picks = self.pick(count=10, maps=["Sabatulo"])
+        picks = self.pick(count=12, maps=["Sabatulo"], lighting=["DayClear"])  # 5 combinations
         keys = [rotate.entry_key(p["entry"]) for p in picks]
-        self.assertEqual(len(set(keys[:4])), 4)  # every combination is used before any repeat
+        self.assertEqual(len(set(keys[:5])), 5)  # every combination is used before any repeat
         self.assertTrue(all(a != b for a, b in zip(keys, keys[1:])))
         with self.assertRaisesRegex(rotate.RotationError, "only one lighting/zone combination"):
-            self.pick(count=3, maps=["Sabatulo"], lighting=["DayClear"])
+            self.pick(count=3, maps=["Sabatulo"], lighting=["DayClear"], zones=["Hospital"])
 
     def test_sabatulo_only_uses_its_lighting(self):
         allowed = {"DayClear", "DayLateClear", "DayLateGray", "DayLateRain"}
-        picks = self.pick(count=12, maps=["Sabatulo"], modifiers=["LimitedGear"])
+        picks = self.pick(count=20, maps=["Sabatulo"], modifiers=["LimitedGear"])
         for p in picks:
             self.assertEqual(p["entry"]["map"], "Russia")
             self.assertEqual(p["entry"]["experience"], "Moscow_KOTH_01")
             self.assertIn(p["entry"]["lighting"], allowed)
             self.assertEqual(p["entry"]["modifiers"], ["KOTH_LimitedGear"])
         self.assertEqual({p["entry"]["lighting"] for p in picks}, allowed)
+        self.assertEqual({rotate.zone_label(p["entry"]["zoneAlternator"]).split(".")[0] for p in picks},
+                         {"Default", "Bazaar", "Hillside", "Hospital", "River"})
 
     def test_limited_gear_goes_after_other_modifiers(self):
         picks = self.pick(count=12, modifiers=["LimitedGear", "InfantryOnly"])
@@ -150,15 +154,13 @@ class GenerationTests(unittest.TestCase):
         return counts
 
     def test_maps_are_balanced(self):
-        # 16 maps fits within Sabatulo's 4 combinations, so every map gets 4.
         counts = self.count_maps(self.pick(count=16))
         self.assertLessEqual(max(counts.values()) - min(counts.values()), 1)
 
-    def test_small_map_steps_aside_instead_of_repeating(self):
-        counts = self.count_maps(self.pick(count=30))
-        self.assertEqual(counts["Sabatulo"], 4)
-        others = [v for k, v in counts.items() if k != "Sabatulo"]
-        self.assertLessEqual(max(others) - min(others), 1)
+    def test_maps_are_capped_at_their_combinations(self):
+        # DayClear only: Sabatulo 5 zones, Zestafona 4, Ozeti 4, Bakurani 3 = 16 combinations.
+        counts = self.count_maps(self.pick(count=16, lighting=["DayClear"]))
+        self.assertEqual(counts, {"Sabatulo": 5, "Zestafona": 4, "Ozeti": 4, "Bakurani": 3})
 
     def test_same_seed_same_rotation(self):
         self.assertEqual(self.pick(seed=42), self.pick(seed=42))
@@ -250,7 +252,7 @@ class WebParityTests(unittest.TestCase):
 
     def test_web_refuses_too_many_maps(self):
         result = subprocess.run(["node", str(ROOT / "tests" / "web_generate.mjs"),
-                                 json.dumps(dict(count=10, maps=["Sabatulo", "Ozeti"]))],
+                                 json.dumps(dict(count=10, maps=["Sabatulo", "Ozeti"], lighting=["DayClear"]))],
                                 capture_output=True, text=True, encoding="utf-8")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("at most 9 maps", result.stderr)

@@ -1,5 +1,5 @@
 {
-  "notes": "Built from examples/export-all-options.json (a dashboard export containing every option). Sabatulo (Season 03) only allows DayClear, DayLateClear, DayLateGray and DayLateRain, and has no zone alternators yet, so it uses the blank zone. The other maps allow every lighting preset. Modifiers are optional (none = standard game mode) and can be combined. A blank zone (\"\") means Default, so maps that have an explicit Default.Circle zone list that instead.",
+  "notes": "Built from examples/export-all-options.json (a dashboard export containing every option). Sabatulo (Season 03) only allows DayClear, DayLateClear, DayLateGray and DayLateRain, Its zone ids are spelled \"Sabartulo\" (as exported by the dashboard) and it has no explicit Default.Circle zone, so its Default is the blank zone. The other maps allow every lighting preset. Modifiers are optional (none = standard game mode) and can be combined. A blank zone (\"\") means Default, so maps that have an explicit Default.Circle zone list that instead.",
   "maps": {
     "Zestafona": {
       "map": "NorthAmerica",
@@ -62,7 +62,13 @@
         }
       },
       "lighting": ["DayClear", "DayLateClear", "DayLateGray", "DayLateRain"],
-      "zones": [""]
+      "zones": [
+        "",
+        "ZoneAlternator.Sabartulo.Bazaar.Circle",
+        "ZoneAlternator.Sabartulo.Hillside.Circle",
+        "ZoneAlternator.Sabartulo.Hospital.Circle",
+        "ZoneAlternator.Sabartulo.River.Circle"
+      ]
     }
   },
   "lightingTags": {

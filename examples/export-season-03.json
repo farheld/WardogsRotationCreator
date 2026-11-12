@@ -1,0 +1,114 @@
+{
+  "kind": "wardogs-rotation",
+  "name": "Example export - Season 03",
+  "mode": "Ordered",
+  "entries": [
+    {
+      "map": "Russia",
+      "experience": "Moscow_KOTH_01",
+      "modifiers": [],
+      "lighting": "DayLateRain",
+      "zoneAlternator": ""
+    },
+    {
+      "map": "Russia",
+      "experience": "Moscow_KOTH_01",
+      "modifiers": [],
+      "lighting": "DayClear",
+      "zoneAlternator": ""
+    },
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [],
+      "lighting": "DayLateGray",
+      "zoneAlternator": "ZoneAlternator.Zestafona.WaterTreatment.Circle"
+    },
+    {
+      "map": "Europe",
+      "experience": "Madrid_KOTH_01",
+      "modifiers": [],
+      "lighting": "DayEarlyClear",
+      "zoneAlternator": "ZoneAlternator.Ozeti.Farmland.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_02",
+      "modifiers": [],
+      "lighting": "DayEndClear",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Lumberyard.Circle"
+    },
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [],
+      "lighting": "DayStartClear",
+      "zoneAlternator": "ZoneAlternator.Zestafona.SmallFactory.Circle"
+    },
+    {
+      "map": "Europe",
+      "experience": "Madrid_KOTH_01",
+      "modifiers": [],
+      "lighting": "DayLateRain",
+      "zoneAlternator": "ZoneAlternator.Ozeti.Church.Circle"
+    },
+    {
+      "map": "NorthAmerica",
+      "experience": "Detroit_KOTH_01",
+      "modifiers": [],
+      "lighting": "DayStartClear",
+      "zoneAlternator": "ZoneAlternator.Zestafona.Houses.Circle"
+    },
+    {
+      "map": "Kavkazi",
+      "experience": "Bakurani_KOTH_02",
+      "modifiers": [],
+      "lighting": "DayLateClear",
+      "zoneAlternator": "ZoneAlternator.Bakurani.Lumberyard.Circle"
+    },
+    {
+      "map": "Russia",
+      "experience": "Moscow_KOTH_01",
+      "modifiers": [],
+      "lighting": "DayLateClear",
+      "zoneAlternator": ""
+    },
+    {
+      "map": "Russia",
+      "experience": "Moscow_KOTH_01",
+      "modifiers": [],
+      "lighting": "DayLateClear",
+      "zoneAlternator": "ZoneAlternator.Sabartulo.Hospital.Circle"
+    },
+    {
+      "map": "Russia",
+      "experience": "Moscow_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly",
+        "KOTH_Hardcore"
+      ],
+      "lighting": "DayLateClear",
+      "zoneAlternator": "ZoneAlternator.Sabartulo.Bazaar.Circle"
+    },
+    {
+      "map": "Russia",
+      "experience": "Moscow_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly",
+        "KOTH_LimitedGear"
+      ],
+      "lighting": "DayLateClear",
+      "zoneAlternator": "ZoneAlternator.Sabartulo.River.Circle"
+    },
+    {
+      "map": "Russia",
+      "experience": "Moscow_KOTH_01",
+      "modifiers": [
+        "KOTH_InfantryOnly",
+        "KOTH_LimitedGear"
+      ],
+      "lighting": "DayLateClear",
+      "zoneAlternator": "ZoneAlternator.Sabartulo.Hillside.Circle"
+    }
+  ]
+}
