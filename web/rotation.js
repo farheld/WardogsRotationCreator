@@ -93,42 +93,113 @@ function shuffle(arr, rng) {
 
 const choice = (arr, rng) => arr[Math.floor(rng() * arr.length)];
 
-/** Balanced pick: least-used map first, never the same map twice in a row, no duplicates. */
-export function pickEntries(pool, count, rng) {
-  if (!pool.length) throw new Error("No combinations match those choices.");
+// Rules (same as rotate.py):
+// - Several maps: no entry is ever repeated, the same map never plays twice in a row, and maps
+//   are spread as evenly as their number of combinations allows.
+// - One map: entries may repeat (every combination is used before any repeats), but the same
+//   entry never plays twice in a row.
+
+function groupByMap(pool) {
   const byMap = new Map();
   for (const c of pool) {
     if (!byMap.has(c.display)) byMap.set(c.display, []);
     byMap.get(c.display).push(c);
   }
-  const mapNames = [...byMap.keys()];
-  const used = new Set();
-  const uses = new Map(mapNames.map((m) => [m, 0]));
-  const picks = [];
-  let prev = null;
+  return byMap;
+}
 
+/** Spread `count` as evenly as possible without going over each map's cap. */
+function fillCounts(caps, count) {
+  const counts = new Map([...caps.keys()].map((m) => [m, 0]));
   for (let i = 0; i < count; i++) {
-    let choices = mapNames.filter((m) => m !== prev);
-    if (!choices.length) choices = mapNames;
-    // A map that has used up its combinations steps aside while others still have fresh ones.
-    const fresh = choices.filter((m) => byMap.get(m).some((c) => !used.has(entryKey(c.entry))));
-    if (fresh.length) choices = fresh;
-    const least = Math.min(...choices.map((m) => uses.get(m)));
-    choices = shuffle(choices.filter((m) => uses.get(m) === least), rng);
-
-    let chosen = null;
-    for (const m of choices) {
-      const candidates = byMap.get(m).filter((c) => !used.has(entryKey(c.entry)));
-      if (candidates.length) { chosen = choice(candidates, rng); break; }
-    }
-    if (!chosen) chosen = choice(choices.flatMap((m) => byMap.get(m)), rng);
-
-    picks.push(chosen);
-    used.add(entryKey(chosen.entry));
-    uses.set(chosen.display, uses.get(chosen.display) + 1);
-    prev = chosen.display;
+    const open = [...caps.keys()].filter((m) => counts.get(m) < caps.get(m));
+    if (!open.length) return null;
+    const low = open.reduce((a, b) => (counts.get(b) < counts.get(a) ? b : a));
+    counts.set(low, counts.get(low) + 1);
   }
-  return picks;
+  return counts;
+}
+
+/** Can these per-map counts be ordered without the same map twice in a row? */
+function arrangeable(counts) {
+  const values = [...counts.values()];
+  const total = values.reduce((a, b) => a + b, 0);
+  const top = Math.max(...values);
+  return top <= total - top + 1;
+}
+
+/** Longest rotation the pool allows under the rules. Infinity = no limit (single map). */
+export function maxCount(pool) {
+  const byMap = groupByMap(pool);
+  if (!byMap.size) return 0;
+  if (byMap.size === 1) return pool.length > 1 ? Infinity : 1;
+  const caps = new Map([...byMap].map(([m, cs]) => [m, cs.length]));
+  let best = 0;
+  for (let n = 1; n <= pool.length; n++) {
+    const counts = fillCounts(caps, n);
+    if (counts && arrangeable(counts)) best = n;
+  }
+  return best;
+}
+
+/** Explain why `count` is too many for this pool, or null if it's fine. */
+export function limitMessage(pool, count) {
+  const limit = maxCount(pool);
+  if (count <= limit) return null;
+  const byMap = groupByMap(pool);
+  if (byMap.size === 1)
+    return `${[...byMap.keys()][0]} has only one lighting/zone combination selected, so it would ` +
+      "play the same entry twice in a row. Select more lighting or zones.";
+  return `These choices allow at most ${limit} maps without repeating an entry or playing the ` +
+    "same map twice in a row. Lower the number of maps, or select more maps, lighting or zones.";
+}
+
+export function pickEntries(pool, count, rng) {
+  if (!pool.length) throw new Error("No combinations match those choices.");
+  const problem = limitMessage(pool, count);
+  if (problem) throw new Error(problem);
+
+  const byMap = groupByMap(pool);
+  if (byMap.size === 1) return pickSingleMap(pool, count, rng);
+
+  // How many entries each map gets: as even as possible, with random tie-breaks.
+  const caps = new Map([...byMap].map(([m, cs]) => [m, cs.length]));
+  const counts = new Map([...caps.keys()].map((m) => [m, 0]));
+  for (let i = 0; i < count; i++) {
+    const open = [...caps.keys()].filter((m) => counts.get(m) < caps.get(m));
+    const low = Math.min(...open.map((m) => counts.get(m)));
+    const m = choice(open.filter((x) => counts.get(x) === low), rng);
+    counts.set(m, counts.get(m) + 1);
+  }
+
+  // Order the maps: always take the map with the most left (never the previous one), which
+  // guarantees no back-to-back maps whenever that is possible. Ties are broken randomly.
+  const remaining = new Map(counts);
+  const order = [];
+  let prev = null;
+  for (let i = 0; i < count; i++) {
+    const options = [...remaining.keys()].filter((m) => remaining.get(m) > 0 && m !== prev);
+    const top = Math.max(...options.map((m) => remaining.get(m)));
+    prev = choice(options.filter((m) => remaining.get(m) === top), rng);
+    remaining.set(prev, remaining.get(prev) - 1);
+    order.push(prev);
+  }
+
+  // Give each slot a different random combination from its map.
+  const decks = new Map([...byMap].map(([m, cs]) => [m, shuffle([...cs], rng).slice(0, counts.get(m))]));
+  return order.map((m) => decks.get(m).pop());
+}
+
+/** Shuffled rounds of every combination: no repeats until all are used, never twice in a row. */
+function pickSingleMap(pool, count, rng) {
+  const picks = [];
+  while (picks.length < count) {
+    const deck = shuffle([...pool], rng);
+    if (picks.length && deck.length > 1 && entryKey(deck[0].entry) === entryKey(picks.at(-1).entry))
+      [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]];
+    picks.push(...deck);
+  }
+  return picks.slice(0, count);
 }
 
 export function buildRotation(name, picks, mode = "Ordered") {

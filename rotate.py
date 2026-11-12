@@ -12,7 +12,6 @@ import json
 import random
 import re
 import sys
-from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -185,50 +184,110 @@ def filter_pool(pool: list[dict], catalog: dict, args) -> list[dict]:
 
 # --------------------------------------------------------------------------- picking
 
-def pick_entries(pool: list[dict], count: int, rng: random.Random, allow_repeats: bool) -> list[dict]:
-    """Balanced pick: least-used map first, never the same map back-to-back
-    (when more than one map is available), no duplicate entries unless the pool runs out.
-    A map that has used up all its combinations steps aside while others still have fresh ones."""
-    if not pool:
-        raise RotationError("No combinations match those filters.")
+# Rules (web/rotation.js follows the same ones):
+# - Several maps: no entry is ever repeated, the same map never plays twice in a row, and maps
+#   are spread as evenly as their number of combinations allows.
+# - One map: entries may repeat (every combination is used before any repeats), but the same
+#   entry never plays twice in a row.
 
+def _group_by_map(pool: list[dict]) -> dict[str, list[dict]]:
     by_map: dict[str, list[dict]] = {}
     for c in pool:
         by_map.setdefault(c["display"], []).append(c)
-    map_names = list(by_map)
+    return by_map
 
-    used_keys: set = set()
-    map_uses: Counter = Counter()
-    picks: list[dict] = []
-    prev = None
 
+def _fill_counts(caps: dict[str, int], count: int) -> dict[str, int] | None:
+    """Spread `count` as evenly as possible without going over each map's cap."""
+    counts = {m: 0 for m in caps}
     for _ in range(count):
-        choices = [m for m in map_names if m != prev] or map_names
-        if not allow_repeats:
-            fresh = [m for m in choices
-                     if any(entry_key(c["entry"]) not in used_keys for c in by_map[m])]
-            choices = fresh or choices
-        least = min(map_uses[m] for m in choices)
-        choices = [m for m in choices if map_uses[m] == least]
-        rng.shuffle(choices)
+        open_maps = [m for m in caps if counts[m] < caps[m]]
+        if not open_maps:
+            return None
+        counts[min(open_maps, key=lambda m: counts[m])] += 1
+    return counts
 
-        chosen = None
-        for m in choices:
-            candidates = by_map[m] if allow_repeats else \
-                [c for c in by_map[m] if entry_key(c["entry"]) not in used_keys]
-            if candidates:
-                chosen = rng.choice(candidates)
-                break
-        if chosen is None:
-            # Every unique combo used: fall back to repeats, still avoiding back-to-back maps.
-            fallback = [c for m in choices for c in by_map[m]] or pool
-            chosen = rng.choice(fallback)
 
-        picks.append(chosen)
-        used_keys.add(entry_key(chosen["entry"]))
-        map_uses[chosen["display"]] += 1
-        prev = chosen["display"]
-    return picks
+def _arrangeable(counts: dict[str, int]) -> bool:
+    """Can these per-map counts be ordered without the same map twice in a row?"""
+    total, top = sum(counts.values()), max(counts.values())
+    return top <= total - top + 1
+
+
+def max_count(pool: list[dict]) -> int | None:
+    """Longest rotation the pool allows under the rules. None = no limit (single map)."""
+    by_map = _group_by_map(pool)
+    if not by_map:
+        return 0
+    if len(by_map) == 1:
+        return None if len(pool) > 1 else 1
+    caps = {m: len(cs) for m, cs in by_map.items()}
+    best = 0
+    for n in range(1, sum(caps.values()) + 1):
+        counts = _fill_counts(caps, n)
+        if counts and _arrangeable(counts):
+            best = n
+    return best
+
+
+def limit_message(pool: list[dict], count: int) -> str | None:
+    """Explain why `count` is too many for this pool, or None if it's fine."""
+    limit = max_count(pool)
+    if limit is None or count <= limit:
+        return None
+    by_map = _group_by_map(pool)
+    if len(by_map) == 1:
+        return (f"{next(iter(by_map))} has only one lighting/zone combination selected, so it would "
+                f"play the same entry twice in a row. Select more lighting or zones.")
+    return (f"These choices allow at most {limit} maps without repeating an entry or playing the "
+            f"same map twice in a row. Lower the number of maps, or select more maps, lighting or zones.")
+
+
+def pick_entries(pool: list[dict], count: int, rng: random.Random) -> list[dict]:
+    if not pool:
+        raise RotationError("No combinations match those filters.")
+    problem = limit_message(pool, count)
+    if problem:
+        raise RotationError(problem)
+
+    by_map = _group_by_map(pool)
+    if len(by_map) == 1:
+        return _pick_single_map(pool, count, rng)
+
+    # How many entries each map gets: as even as possible, with random tie-breaks.
+    caps = {m: len(cs) for m, cs in by_map.items()}
+    counts = {m: 0 for m in caps}
+    for _ in range(count):
+        open_maps = [m for m in caps if counts[m] < caps[m]]
+        low = min(counts[m] for m in open_maps)
+        counts[rng.choice([m for m in open_maps if counts[m] == low])] += 1
+
+    # Order the maps: always take the map with the most left (never the previous one), which
+    # guarantees no back-to-back maps whenever that is possible. Ties are broken randomly.
+    remaining = dict(counts)
+    order, prev = [], None
+    for _ in range(count):
+        options = [m for m in remaining if remaining[m] > 0 and m != prev]
+        top = max(remaining[m] for m in options)
+        prev = rng.choice([m for m in options if remaining[m] == top])
+        remaining[prev] -= 1
+        order.append(prev)
+
+    # Give each slot a different random combination from its map.
+    decks = {m: rng.sample(cs, counts[m]) for m, cs in by_map.items()}
+    return [decks[m].pop() for m in order]
+
+
+def _pick_single_map(pool: list[dict], count: int, rng: random.Random) -> list[dict]:
+    """Deal shuffled rounds of every combination, so nothing repeats until all are used and the
+    same entry never plays twice in a row."""
+    picks: list[dict] = []
+    while len(picks) < count:
+        deck = rng.sample(pool, len(pool))
+        if picks and len(deck) > 1 and entry_key(deck[0]["entry"]) == entry_key(picks[-1]["entry"]):
+            deck[0], deck[-1] = deck[-1], deck[0]
+        picks.extend(deck)
+    return picks[:count]
 
 
 # --------------------------------------------------------------------------- validation
@@ -363,7 +422,6 @@ def parse_args(argv=None):
     p.add_argument("--name", help="Rotation name shown in the bot")
     p.add_argument("--mode", default="Ordered", help="Rotation playback mode (default Ordered)")
     p.add_argument("--seed", type=int, help="Random seed for a reproducible rotation")
-    p.add_argument("--allow-repeats", action="store_true", help="Allow identical entries to repeat")
     p.add_argument("--out", type=Path, help="Output file (default rotations/rotation-<name>.json)")
     p.add_argument("--catalog", type=Path, default=CATALOG_PATH, help=argparse.SUPPRESS)
     p.add_argument("--list", action="store_true", help="Show everything in the catalog and exit")
@@ -397,7 +455,7 @@ def main(argv=None) -> int:
     try:
         mods = resolve_modifiers(catalog, args.modifiers)
         pool = filter_pool(build_pool(catalog, mods), catalog, args)
-        picks = pick_entries(pool, args.count, rng, args.allow_repeats)
+        picks = pick_entries(pool, args.count, rng)
     except RotationError as e:
         print(f"error: {e} Run with --list to see what's available.", file=sys.stderr)
         return 1
@@ -495,7 +553,7 @@ def _ask_settings(catalog: dict) -> tuple[str, int, argparse.Namespace]:
         weather=None, exclude_weather=None,
         zones=[zone_opts[k] for k in zones] if zones else None, exclude_zones=None,
         no_default_zone=False, default_zone_only=False,
-        include_legacy=include_legacy, allow_repeats=False)
+        include_legacy=include_legacy)
     return name, count, args
 
 
@@ -517,13 +575,22 @@ def interactive(catalog: dict) -> int:
                 print(f"\nNote: none of the chosen lighting or zones are available on "
                       f"{' and '.join(missing)}, so {'it' if len(missing) == 1 else 'they'} "
                       f"won't appear in this rotation.")
-            if count > len(pool):
-                print(f"\nNote: your choices only allow {len(pool)} different combinations, "
-                      f"so some of the {count} maps will repeat.")
+            problem = limit_message(pool, count)
+            if problem:
+                print(f"\n{problem}")
+                limit = max_count(pool)
+                if limit and limit > 1 and _ask_yes(f"Use {limit} maps instead?", True):
+                    count = limit
+                else:
+                    print("Let's try again.")
+                    continue
+            elif len({c['display'] for c in pool}) == 1 and count > len(pool):
+                print(f"\nNote: with one map and {len(pool)} combinations, entries repeat after "
+                      f"every {len(pool)} maps (never twice in a row).")
 
             saved = False
             while True:
-                picks = pick_entries(pool, count, random.Random(), False)
+                picks = pick_entries(pool, count, random.Random())
                 rotation = build_rotation(name, "Ordered", picks)
                 print(f"\n{name}  ({count} maps, picked from {len(pool)} combinations)\n")
                 print(summarize(rotation, catalog))

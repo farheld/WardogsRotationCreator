@@ -4,9 +4,9 @@ Generate random map rotations for a **WARDOGS** server, ready to import into the
 [WarDogs Server Commands](https://wardogsbot.com/) dashboard (**Dashboard → Rotation**).
 
 Pick how many maps you want, which maps, lighting/weather and zones. The tool builds a
-balanced rotation, so the same map is never played twice in a row and no entry repeats. It
-saves the rotation as a JSON file in the exact format the dashboard exports, so you can import
-it as-is.
+balanced rotation: the same map never plays twice in a row, and entries only repeat in
+single-map rotations (see [Repeat rules](#repeat-rules)). It saves the rotation as a JSON file in the exact format the dashboard exports, so you can import it
+as-is.
 
 > This is a community tool. It isn't affiliated with the WARDOGS developers or with
 > wardogsbot.com. The file format follows rotations exported from the wardogsbot.com dashboard.
@@ -81,8 +81,16 @@ Lighting presets and the maps that allow them:
 
 `Bakurani_KOTH_01` (the old spawns) is never picked unless you ask for it.
 
-Sabatulo has only 4 lighting/zone combinations. In long rotations, it appears up to 4 times and
-then steps aside, so the rotation doesn't have to repeat an entry.
+### Repeat rules
+
+- **Several maps:** no entry is ever repeated, and the same map never plays twice in a row. Maps
+  are spread as evenly as their number of combinations allows. If you ask for more maps than
+  that allows, the tool tells you the maximum and offers to use it. For example, Sabatulo has only
+  4 lighting/zone combinations, so Sabatulo + Ozeti allows at most 9 maps: 4 Sabatulo entries
+  with Ozeti between and around them.
+- **One map:** entries can repeat, which lets you build, for example, a 10-map rotation of a
+  single map. Every combination is used before any repeats, and the same entry never plays twice
+  in a row.
 
 ### Modifiers
 

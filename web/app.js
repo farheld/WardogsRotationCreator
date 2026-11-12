@@ -1,5 +1,5 @@
 import {
-  buildPool, filterPool, pickEntries, buildRotation, mulberry32, modifierNames,
+  buildPool, filterPool, pickEntries, maxCount, limitMessage, buildRotation, mulberry32, modifierNames,
   zoneShort, defaultFilename, toJson,
 } from "./rotation.js";
 
@@ -192,8 +192,28 @@ function regenerate({ keepSeed = false } = {}) {
   if (missing.length)
     note(`None of the selected lighting or zones are available on ${missing.join(" and ")}, ` +
          `so ${missing.length > 1 ? "they're" : "it's"} left out.`);
-  if (state.count > pool.length)
-    note(`These choices allow only ${pool.length} different combinations, so some of the ${state.count} maps repeat.`);
+  const problem = limitMessage(pool, state.count);
+  if (problem) {
+    note(problem, "error");
+    const limit = maxCount(pool);
+    if (limit > 1 && Number.isFinite(limit)) {
+      const fix = document.createElement("button");
+      fix.type = "button";
+      fix.className = "btn btn-quiet note-action";
+      fix.textContent = `Use ${limit} maps`;
+      fix.addEventListener("click", () => {
+        state.count = limit;
+        $("count").value = limit;
+        regenerate();
+      });
+      $("notes").lastElementChild.append(fix);
+    }
+    $("summary").textContent = "";
+    setActionsEnabled(false);
+    return;
+  }
+  if (new Set(pool.map((c) => c.display)).size === 1 && state.count > pool.length)
+    note(`With one map and ${pool.length} combinations, entries repeat after every ${pool.length} maps (never twice in a row).`);
 
   const picks = pickEntries(pool, state.count, mulberry32(state.seed));
   const rotation = buildRotation(state.name.trim() || `Rotation ${today()}`, picks);

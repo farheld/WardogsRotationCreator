@@ -21,8 +21,7 @@ def make_args(**overrides) -> argparse.Namespace:
     defaults = dict(
         maps=None, modes=None, modifiers=None, lighting=None, exclude_lighting=None,
         weather=None, exclude_weather=None, zones=None, exclude_zones=None,
-        no_default_zone=False, default_zone_only=False, include_legacy=False,
-        allow_repeats=False)
+        no_default_zone=False, default_zone_only=False, include_legacy=False)
     defaults.update(overrides)
     return argparse.Namespace(**defaults)
 
@@ -80,7 +79,7 @@ class GenerationTests(unittest.TestCase):
     def pick(self, count=20, seed=1, modifiers=(), **filters):
         pool = rotate.build_pool(self.catalog, modifiers)
         pool = rotate.filter_pool(pool, self.catalog, make_args(**filters))
-        return rotate.pick_entries(pool, count, random.Random(seed), False)
+        return rotate.pick_entries(pool, count, random.Random(seed))
 
     def test_default_is_standard_game_mode(self):
         self.assertTrue(all(p["entry"]["modifiers"] == [] for p in self.pick(count=30)))
@@ -92,6 +91,25 @@ class GenerationTests(unittest.TestCase):
             with self.subTest(chosen=chosen):
                 picks = self.pick(count=30, modifiers=chosen)
                 self.assertEqual({tuple(p["entry"]["modifiers"]) for p in picks}, {tuple(expected)})
+
+    def test_several_maps_never_repeat_and_stop_at_the_limit(self):
+        pool = rotate.filter_pool(self.pool, self.catalog, make_args(maps=["Sabatulo", "Ozeti"]))
+        self.assertEqual(rotate.max_count(pool), 9)  # 4 Sabatulo entries need 5 Ozeti between/around them
+        picks = self.pick(count=9, maps=["Sabatulo", "Ozeti"])
+        keys = [rotate.entry_key(p["entry"]) for p in picks]
+        self.assertEqual(len(set(keys)), 9)
+        maps = [p["display"] for p in picks]
+        self.assertTrue(all(a != b for a, b in zip(maps, maps[1:])))
+        with self.assertRaisesRegex(rotate.RotationError, "at most 9 maps"):
+            self.pick(count=10, maps=["Sabatulo", "Ozeti"])
+
+    def test_single_map_repeats_but_never_back_to_back(self):
+        picks = self.pick(count=10, maps=["Sabatulo"])
+        keys = [rotate.entry_key(p["entry"]) for p in picks]
+        self.assertEqual(len(set(keys[:4])), 4)  # every combination is used before any repeat
+        self.assertTrue(all(a != b for a, b in zip(keys, keys[1:])))
+        with self.assertRaisesRegex(rotate.RotationError, "only one lighting/zone combination"):
+            self.pick(count=3, maps=["Sabatulo"], lighting=["DayClear"])
 
     def test_sabatulo_only_uses_its_lighting(self):
         allowed = {"DayClear", "DayLateClear", "DayLateGray", "DayLateRain"}
@@ -203,21 +221,34 @@ class WebParityTests(unittest.TestCase):
         cases = [dict(count=30, seed=1),
                  dict(count=12, seed=2, modifiers=["InfantryOnly"]),
                  dict(count=12, seed=3, modifiers=["Hardcore", "InfantryOnly"], maps=["Ozeti", "Bakurani"]),
-                 dict(count=40, seed=4, includeLegacy=True)]
+                 dict(count=40, seed=4, includeLegacy=True),
+                 dict(count=9, seed=5, maps=["Sabatulo", "Ozeti"], modifiers=["LimitedGear"]),
+                 dict(count=10, seed=6, maps=["Sabatulo"])]
         for opts in cases:
             with self.subTest(opts=opts):
                 rot = self.generate(**opts)
                 self.assertEqual(rotate.validate_rotation(rot, catalog), [])
                 entries = rot["entries"]
                 self.assertEqual(len(entries), opts["count"])
+                keys = [rotate.entry_key(e) for e in entries]
                 maps = [internal[e["map"]] for e in entries]
-                self.assertTrue(all(a != b for a, b in zip(maps, maps[1:])))
-                self.assertEqual(len({rotate.entry_key(e) for e in entries}), len(entries))
+                if len(opts.get("maps") or catalog["maps"]) == 1:
+                    self.assertTrue(all(a != b for a, b in zip(keys, keys[1:])))
+                else:
+                    self.assertTrue(all(a != b for a, b in zip(maps, maps[1:])))
+                    self.assertEqual(len(set(keys)), len(keys))
                 self.assertEqual(len({tuple(e["modifiers"]) for e in entries}), 1)
                 if opts.get("maps"):
                     self.assertTrue(set(maps) <= set(opts["maps"]))
                 used_legacy = {e["experience"] for e in entries} & legacy
                 self.assertEqual(bool(used_legacy), bool(opts.get("includeLegacy")))
+
+    def test_web_refuses_too_many_maps(self):
+        result = subprocess.run(["node", str(ROOT / "tests" / "web_generate.mjs"),
+                                 json.dumps(dict(count=10, maps=["Sabatulo", "Ozeti"]))],
+                                capture_output=True, text=True, encoding="utf-8")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("at most 9 maps", result.stderr)
 
     def test_web_writes_same_layout_as_python(self):
         rot = self.generate(count=3, seed=5)

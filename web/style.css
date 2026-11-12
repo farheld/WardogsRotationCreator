@@ -217,3 +217,5 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: var(--olive
   .slot-light { grid-column: 3; text-align: left; margin-top: -4px; }
   .actions .btn { flex: 1 1 auto; }
 }
+
+.note-action { display: block; margin-top: 8px; min-height: 36px; padding: 6px 12px; }
